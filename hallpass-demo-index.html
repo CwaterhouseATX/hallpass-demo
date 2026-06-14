@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Hall Pass — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   TOKENS — "Classroom dispatch board"
+   green = go/available · amber = wait · red = attention
+   warm kiosk  ·  cool console
+   ============================================================ */
+:root{
+  --ink:#1B2330;
+  --ink-soft:#48566b;
+  --ink-faint:#8794a6;
+  --paper:#EEF1F4;
+  --surface:#FFFFFF;
+  --surface-2:#E5EAF0;
+  --line:#D5DCE5;
+
+  --go:#1F8A5B;        --go-ink:#0d5e3a;   --go-wash:#e2f3ea;
+  --wait:#D98A1F;      --wait-ink:#8a5410;  --wait-wash:#fbefdb;
+  --signal:#E1554A;    --signal-ink:#9c2c24; --signal-wash:#fbe4e2;
+  --console:#28406B;   --console-ink:#1a2c4d; --console-wash:#e6ebf4;
+
+  --r-sm:8px; --r:14px; --r-lg:22px; --r-xl:30px;
+  --shadow:0 1px 2px rgba(27,35,48,.06), 0 8px 24px -12px rgba(27,35,48,.22);
+  --shadow-lg:0 24px 60px -24px rgba(27,35,48,.40);
+  --font-display:"Bricolage Grotesque",system-ui,sans-serif;
+  --font-ui:"Hanken Grotesk",system-ui,sans-serif;
+  --font-mono:"Spline Sans Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font-ui);
+  color:var(--ink);
+  background:var(--paper);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.45;
+  overflow:hidden;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:1rem;color:var(--ink)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ============================================================ DEMO BANNER */
+.demobar{
+  flex:0 0 auto;display:flex;align-items:center;gap:12px;
+  padding:7px 16px;background:var(--ink);color:#fff;font-size:.78rem;font-weight:500;
+  letter-spacing:.01em;
+}
+.demobar b{font-weight:700}
+.demobar .spacer{flex:1}
+.demobar button{
+  color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:999px;
+  padding:4px 12px;font-size:.74rem;font-weight:600;transition:background .15s;
+}
+.demobar button:hover{background:rgba(255,255,255,.12)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--go);display:inline-block;box-shadow:0 0 0 3px var(--go-wash)}
+
+/* ============================================================ KIOSK */
+.kiosk{
+  flex:1;min-height:0;position:relative;overflow:hidden;
+  background:
+    radial-gradient(120% 90% at 50% -10%, #ffffff 0%, var(--paper) 55%),
+    var(--paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;
+}
+.kiosk-rail{position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px);
+  background-size:100% 64px;opacity:.35;mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
+.kiosk-head{text-align:center;margin-bottom:22px;z-index:1}
+.kiosk-eyebrow{font-size:.82rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
+.kiosk-title{font-family:var(--font-display);font-weight:800;font-size:clamp(2rem,4.5vw,3.4rem);letter-spacing:-.02em;line-height:1.02;margin-top:4px}
+.kiosk-sub{color:var(--ink-soft);font-size:1.05rem;margin-top:6px}
+
+.kiosk-card{
+  z-index:1;width:min(560px,94vw);background:var(--surface);border-radius:var(--r-xl);
+  box-shadow:var(--shadow-lg);border:1px solid var(--line);
+  padding:26px 26px 30px;
+}
+.numscreen{
+  background:var(--ink);color:#fff;border-radius:var(--r-lg);
+  padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;
+}
+.numscreen .label{font-size:.78rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#9fb0c9}
+.numscreen .value{font-family:var(--font-mono);font-weight:700;font-size:clamp(2.2rem,8vw,3.2rem);letter-spacing:.06em;min-height:1.1em}
+.numscreen .value.placeholder{color:#5a6b86}
+
+.dests{display:flex;gap:10px;margin:18px 0 16px}
+.chip{
+  flex:1;border:1.5px solid var(--line);border-radius:var(--r);background:var(--surface);
+  padding:13px 8px;text-align:center;font-weight:600;font-size:.98rem;color:var(--ink-soft);
+  transition:all .14s;
+}
+.chip .ic{font-size:1.3rem;display:block;margin-bottom:2px}
+.chip[aria-pressed="true"]{border-color:var(--go);background:var(--go-wash);color:var(--go-ink)}
+
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.key{
+  background:var(--surface-2);border-radius:var(--r);padding:18px 0;font-size:1.7rem;font-weight:600;
+  font-family:var(--font-mono);color:var(--ink);transition:transform .06s, background .14s;
+}
+.key:active{transform:scale(.95);background:#d3dbe6}
+.key.util{font-size:1.1rem;font-weight:700;font-family:var(--font-ui);color:var(--ink-soft)}
+.key.go{background:var(--go);color:#fff;grid-column:span 1}
+.key.go:active{background:var(--go-ink)}
+
+.kiosk-foot{z-index:1;margin-top:20px;display:flex;align-items:center;gap:16px;color:var(--ink-faint);font-size:.85rem}
+.staff-link{color:var(--ink-faint);font-weight:600;border:1px solid var(--line);border-radius:999px;padding:6px 14px;background:var(--surface)}
+.staff-link:hover{color:var(--console);border-color:var(--console)}
+
+/* result overlay */
+.result{
+  position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:rgba(238,241,244,.7);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.result.show{opacity:1;pointer-events:auto}
+.result-card{
+  background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);
+  padding:40px 44px;text-align:center;max-width:520px;width:92vw;border-top:8px solid var(--go);
+  transform:translateY(8px) scale(.98);transition:transform .25s;
+}
+.result.show .result-card{transform:none}
+.result-card.wait{border-top-color:var(--wait)}
+.result-card .big{font-size:3.4rem;line-height:1;margin-bottom:10px}
+.result-card h2{font-family:var(--font-display);font-size:1.9rem;font-weight:800;letter-spacing:-.01em}
+.result-card p{color:var(--ink-soft);font-size:1.15rem;margin-top:8px}
+
+/* ============================================================ CONSOLE */
+.console{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--paper)}
+.topbar{
+  flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:12px 20px;
+  background:var(--console);color:#fff;
+}
+.brandmark{font-family:var(--font-display);font-weight:800;font-size:1.15rem;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brandmark .glyph{width:26px;height:26px;border-radius:8px;background:#fff;color:var(--console);display:grid;place-items:center;font-size:.95rem;font-weight:800}
+.topbar .who{margin-left:6px;font-size:.9rem;opacity:.92}
+.topbar .who b{font-weight:700}
+.topbar .spacer{flex:1}
+.topbar .clock{font-family:var(--font-mono);font-weight:600;font-size:.95rem;opacity:.95}
+.lockbtn{border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 15px;color:#fff;font-weight:600;font-size:.85rem}
+.lockbtn:hover{background:rgba(255,255,255,.14)}
+
+.console-body{flex:1;min-height:0;display:flex}
+.nav{
+  flex:0 0 210px;background:var(--surface);border-right:1px solid var(--line);padding:14px 12px;
+  display:flex;flex-direction:column;gap:3px;overflow:auto;
+}
+.nav button{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 12px;border-radius:10px;
+  color:var(--ink-soft);font-weight:600;font-size:.95rem;transition:background .12s,color .12s;
+}
+.nav button .ic{width:20px;text-align:center;font-size:1.05rem}
+.nav button:hover{background:var(--surface-2)}
+.nav button.active{background:var(--console-wash);color:var(--console-ink)}
+.nav .navtag{margin-left:auto;background:var(--signal);color:#fff;font-size:.7rem;font-weight:800;
+  border-radius:999px;padding:1px 7px;font-family:var(--font-mono)}
+.nav .sep{height:1px;background:var(--line);margin:8px 4px}
+.nav .navlabel{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);padding:8px 12px 4px}
+
+.view{flex:1;min-height:0;overflow:auto;padding:24px 28px}
+.view-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:18px}
+.view-head h1{font-family:var(--font-display);font-size:1.7rem;font-weight:800;letter-spacing:-.015em}
+.view-head .sub{color:var(--ink-soft);font-size:.95rem;padding-bottom:3px}
+.view-head .spacer{flex:1}
+
+/* generic UI */
+.btn{display:inline-flex;align-items:center;gap:7px;background:var(--console);color:#fff;font-weight:600;
+  border-radius:10px;padding:9px 15px;font-size:.92rem;transition:filter .14s,transform .06s}
+.btn:hover{filter:brightness(1.08)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--surface-2);filter:none}
+.btn.go{background:var(--go)}
+.btn.danger{background:var(--signal)}
+.btn.sm{padding:6px 11px;font-size:.85rem;border-radius:8px}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.panel-head{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;font-weight:700}
+.panel-head .count{margin-left:auto;font-family:var(--font-mono);font-size:.85rem;color:var(--ink-faint);font-weight:600}
+.panel-body{padding:14px 16px}
+
+/* the signature: hall-pass tags on the out board */
+.board{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:start}
+@media(max-width:980px){.board{grid-template-columns:1fr}}
+.pass{
+  position:relative;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--go);
+  border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;
+}
+.pass.s-wait{border-left-color:var(--wait)}
+.pass.s-over{border-left-color:var(--signal)}
+.pass.s-over::after{content:"";position:absolute;inset:0;border-radius:var(--r);border:1.5px solid var(--signal);
+  animation:pulse 1.6s ease-in-out infinite;pointer-events:none}
+@keyframes pulse{0%,100%{opacity:.0}50%{opacity:.55}}
+.pass .num{font-family:var(--font-mono);font-weight:700;font-size:1.5rem;letter-spacing:.04em}
+.pass .meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pass .meta .d{font-weight:700;font-size:.95rem}
+.pass .meta .room{color:var(--ink-faint);font-size:.82rem}
+.pass .timer{margin-left:auto;text-align:right}
+.pass .timer .t{font-family:var(--font-mono);font-weight:700;font-size:1.35rem}
+.pass .timer .lbl{font-size:.72rem;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.pass.s-wait .timer .t{color:var(--wait-ink)}
+.pass.s-over .timer .t{color:var(--signal-ink)}
+.pass .ret{margin-left:8px}
+
+.statuslight{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.statuslight.go{background:var(--go);box-shadow:0 0 0 3px var(--go-wash)}
+.statuslight.wait{background:var(--wait);box-shadow:0 0 0 3px var(--wait-wash)}
+.statuslight.over{background:var(--signal);box-shadow:0 0 0 3px var(--signal-wash)}
+
+.alertrow{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.alertrow:last-child{border-bottom:none}
+.alertrow .sev{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:0 0 auto}
+.sev-low{background:var(--ink-faint)} .sev-medium{background:var(--wait)} .sev-high{background:var(--signal)}
+.alertrow .msg{font-size:.9rem;flex:1}
+.alertrow .when{font-size:.74rem;color:var(--ink-faint);font-family:var(--font-mono)}
+
+table.grid{width:100%;border-collapse:collapse;font-size:.92rem}
+table.grid th{text-align:left;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);
+  font-weight:700;padding:8px 12px;border-bottom:1px solid var(--line)}
+table.grid td{padding:10px 12px;border-bottom:1px solid var(--line)}
+table.grid tr:hover td{background:var(--surface-2)}
+.tag{display:inline-block;font-size:.74rem;font-weight:700;border-radius:999px;padding:2px 9px;font-family:var(--font-mono)}
+.tag.exempt{background:var(--console-wash);color:var(--console-ink)}
+
+.empty{text-align:center;color:var(--ink-faint);padding:34px 16px;font-size:.95rem}
+.empty .big{font-size:1.9rem;margin-bottom:6px}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.field label{font-size:.82rem;font-weight:700;color:var(--ink-soft);display:flex;align-items:center;gap:6px}
+.field input,.field select,.field textarea{
+  border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);transition:border-color .14s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--console)}
+.help{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--surface-2);
+  color:var(--ink-soft);font-size:.7rem;font-weight:800;cursor:help}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* modal */
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(27,35,48,.45);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;padding:20px}
+.scrim.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);width:min(520px,96vw);
+  max-height:90vh;overflow:auto}
+.modal-head{padding:18px 22px 6px}
+.modal-head h2{font-family:var(--font-display);font-size:1.4rem;font-weight:800;letter-spacing:-.01em}
+.modal-head p{color:var(--ink-soft);font-size:.92rem;margin-top:3px}
+.modal-body{padding:14px 22px}
+.modal-foot{padding:14px 22px 20px;display:flex;gap:10px;justify-content:flex-end}
+
+.signin-list{display:flex;flex-direction:column;gap:8px}
+.signin-opt{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;transition:border-color .14s,background .14s}
+.signin-opt:hover{border-color:var(--console);background:var(--console-wash)}
+.signin-opt .av{width:38px;height:38px;border-radius:10px;background:var(--console-wash);color:var(--console-ink);
+  display:grid;place-items:center;font-weight:800;font-family:var(--font-display)}
+.signin-opt .nm{font-weight:700}.signin-opt .rl{font-size:.8rem;color:var(--ink-faint)}
+.signin-opt .rl.admin{color:var(--console-ink);font-weight:700}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);z-index:60;
+  background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font-weight:600;font-size:.9rem;
+  box-shadow:var(--shadow-lg);opacity:0;transition:all .25s}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="scrim" id="scrim"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ==================================================================
+   Hall Pass — self-contained demo
+   This file runs entirely in your browser on mock data so you can see
+   how it looks and functions. The same UI later points at the real
+   Google Apps Script backend by setting LIVE_URL (see Settings).
+   ================================================================== */
+
+const CONFIG = {
+  STORE_KEY: "hallpass_demo_store_v3",
+  LIVE_URL_KEY: "hallpass_live_url",
+  SWEEP_MS: 4000,   // demo: check alerts every 4s (real backend: 60s trigger)
+  TICK_MS: 1000
+};
+
+/* ---------- tiny DOM helpers ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const el = (html) => { const t=document.createElement("template"); t.innerHTML=html.trim(); return t.content.firstElementChild; };
+const esc = (s) => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "id-"+Math.random().toString(36).slice(2)+Date.now());
+const nowIso = () => new Date().toISOString();
+const num = (v,f) => { const n=parseFloat(v); return isNaN(n)?f:n; };
+const truthy = (v) => v===true || ["true","yes","1"].includes(String(v).toLowerCase());
+
+/* ==================================================================
+   SEED — fake dataset (grades 3 & 4, two classrooms each)
+   ================================================================== */
+function buildSeed(){
+  const minsAgo=(m)=>new Date(Date.now()-m*60000).toISOString();
+  const daysAgo=(d,extraMin=0)=>new Date(Date.now()-d*86400000-extraMin*60000).toISOString();
+  const mkPass=(sn,dest,checkOutIso,durSec,closedBy="student")=>{
+    const s=students.find(x=>x.student_number===String(sn));
+    const checkIn=new Date(new Date(checkOutIso).getTime()+durSec*1000).toISOString();
+    passHistory.push({pass_id:uuid(),student_number:String(sn),grade:s.grade,classroom_id:s.classroom_id,
+      teacher_id:"",destination:dest,check_out_time:checkOutIso,check_in_time:checkIn,
+      duration_seconds:durSec,closed_by:closedBy,closure_method:closedBy==="student"?"self_return":"manual_return",created_at:checkOutIso});
+  };
+
+  const teachers = [
+    {teacher_id:uuid(),email:"principal@demo.school",display_name:"Dana Whitfield",role:"admin",grade:"",classroom_id:"",active:true,alert_preferences_json:"{}",last_login_at:""},
+    {teacher_id:uuid(),email:"rivera@demo.school",display_name:"Ms. Rivera",role:"teacher",grade:"3",classroom_id:"3A",active:true,alert_preferences_json:"{}",last_login_at:""},
+    {teacher_id:uuid(),email:"okafor@demo.school",display_name:"Mr. Okafor",role:"teacher",grade:"3",classroom_id:"3B",active:true,alert_preferences_json:"{}",last_login_at:""},
+    {teacher_id:uuid(),email:"chen@demo.school",display_name:"Ms. Chen",role:"teacher",grade:"4",classroom_id:"4A",active:true,alert_preferences_json:"{}",last_login_at:""},
+    {teacher_id:uuid(),email:"delgado@demo.school",display_name:"Mr. Delgado",role:"teacher",grade:"4",classroom_id:"4B",active:true,alert_preferences_json:"{}",last_login_at:""}
+  ];
+  const classrooms = [
+    {classroom_id:"3A",grade:"3",room_number:"112",teacher_id:teachers[1].teacher_id,active:true},
+    {classroom_id:"3B",grade:"3",room_number:"114",teacher_id:teachers[2].teacher_id,active:true},
+    {classroom_id:"4A",grade:"4",room_number:"121",teacher_id:teachers[3].teacher_id,active:true},
+    {classroom_id:"4B",grade:"4",room_number:"123",teacher_id:teachers[4].teacher_id,active:true}
+  ];
+  const students = [];
+  const mk=(number,grade,room,exempt=false)=>students.push({
+    student_id:uuid(),student_number:String(number),grade:String(grade),classroom_id:room,
+    active:true,alert_exempt:exempt,exemption_scope_json:"",custom_cooldown_minutes:"",created_at:daysAgo(30),removed_at:""
+  });
+  [30001,30002,30003,30004,30005,30006,30007,30008,30009,30010].forEach((n)=>mk(n,3,"3A",n===30007));
+  [30101,30102,30103,30104,30105,30106,30107,30108,30109].forEach(n=>mk(n,3,"3B"));
+  [40001,40002,40003,40004,40005,40006,40007,40008,40009,40010].forEach((n)=>mk(n,4,"4A",n===40009));
+  [40101,40102,40103,40104,40105,40106,40107,40108].forEach(n=>mk(n,4,"4B"));
+
+  const passHistory = [];
+
+  // ── Normal individual history (scattered, realistic) ──
+  // Student 30001 — average user, ~5 trips over past week
+  mkPass(30001,"Bathroom/Water",daysAgo(6,15),210);
+  mkPass(30001,"Bathroom/Water",daysAgo(5,30),195);
+  mkPass(30001,"Bathroom/Water",daysAgo(3,45),220);
+  mkPass(30001,"Bathroom/Water",daysAgo(2,20),180);
+  mkPass(30001,"Bathroom/Water",daysAgo(1,10),240);
+  // 30003 — solo frequent user
+  mkPass(30003,"Bathroom/Water",daysAgo(6,10),310); mkPass(30003,"Bathroom/Water",daysAgo(5,20),285);
+  mkPass(30003,"Bathroom/Water",daysAgo(4,5),320);  mkPass(30003,"Bathroom/Water",daysAgo(3,15),295);
+  mkPass(30003,"Bathroom/Water",daysAgo(2,25),330); mkPass(30003,"Bathroom/Water",daysAgo(1,5),300);
+  mkPass(30003,"Bathroom/Water",daysAgo(0,60),315);
+  // 30006 — occasional
+  mkPass(30006,"Bathroom/Water",daysAgo(5,10),180); mkPass(30006,"Bathroom/Water",daysAgo(2,30),165);
+  // 30008 — baseline
+  mkPass(30008,"Bathroom/Water",daysAgo(6,20),200); mkPass(30008,"Bathroom/Water",daysAgo(4,10),215);
+  mkPass(30008,"Bathroom/Water",daysAgo(2,15),190); mkPass(30008,"Bathroom/Water",daysAgo(1,30),205);
+  // 30009 — light
+  mkPass(30009,"Bathroom/Water",daysAgo(4,40),170); mkPass(30009,"Bathroom/Water",daysAgo(1,50),185);
+  // 30102, 30104 — normal grade 3B
+  mkPass(30102,"Bathroom/Water",daysAgo(5,15),200); mkPass(30102,"Bathroom/Water",daysAgo(2,20),210);
+  mkPass(30104,"Bathroom/Water",daysAgo(4,25),195); mkPass(30104,"Bathroom/Water",daysAgo(1,35),180);
+  // grade 4 baseline
+  mkPass(40001,"Bathroom/Water",daysAgo(5,20),190); mkPass(40001,"Bathroom/Water",daysAgo(2,10),175);
+  mkPass(40004,"Bathroom/Water",daysAgo(4,15),205); mkPass(40004,"Bathroom/Water",daysAgo(1,25),195);
+  mkPass(40006,"Bathroom/Water",daysAgo(5,30),185); mkPass(40006,"Bathroom/Water",daysAgo(2,40),200);
+  mkPass(40008,"Bathroom/Water",daysAgo(4,20),210); mkPass(40008,"Bathroom/Water",daysAgo(1,10),195);
+  mkPass(40101,"Bathroom/Water",daysAgo(5,10),185); mkPass(40103,"Bathroom/Water",daysAgo(3,20),195);
+  // nurse & office
+  mkPass(30004,"Nurse",daysAgo(5,10),480);  mkPass(30004,"Nurse",daysAgo(3,15),510);  mkPass(30004,"Nurse",daysAgo(1,20),495);
+  mkPass(30002,"Office",daysAgo(4,10),360); mkPass(40002,"Office",daysAgo(3,20),390);
+
+  // ── COORDINATED PAIRS — the interesting ones ──────────────────────────────
+  // 30002 & 30005: restricted pair, history of overlapping (A out, B follows 90s later)
+  // Both in scope for the restriction, so these represent past incidents before or around when the restriction was set.
+  const coord=(snA,snB,dayOffset,extraMinA,durA,startGapSec,durB)=>{
+    const outA=daysAgo(dayOffset,extraMinA);
+    const outB=new Date(new Date(outA).getTime()+startGapSec*1000).toISOString();
+    mkPass(snA,"Bathroom/Water",outA,durA);
+    mkPass(snB,"Bathroom/Water",outB,durB);
+  };
+  // 30002 & 30005 — 4 overlapping trips (restriction already active)
+  coord(30002,30005, 6,20, 320, 90, 300);   // B starts 90s after A — fully overlapping
+  coord(30002,30005, 5,10, 290, 110,280);
+  coord(30002,30005, 3,30, 310, 75, 295);
+  coord(30002,30005, 1,15, 330, 95, 310);
+  // Extra solo trips for 30002 (makes them a frequency outlier too)
+  mkPass(30002,"Bathroom/Water",daysAgo(4,20),270); mkPass(30002,"Bathroom/Water",daysAgo(2,10),255);
+  mkPass(30002,"Bathroom/Water",daysAgo(0,90),265);
+
+  // 30004 & 30008 — NO restriction yet, 4 overlapping trips (the unguarded pair to flag)
+  coord(30004,30008, 6,25, 280, 120,270);
+  coord(30004,30008, 4,15, 260, 100,255);
+  coord(30004,30008, 2,20, 290, 80, 275);
+  coord(30004,30008, 1,30, 300, 95, 285);
+
+  // 40003 & 40007 — grade 4 group members, 3 near-simultaneous (within 3 min window)
+  coord(40003,40007, 5,10, 240, 150,230);   // 2.5 min gap — near-simultaneous
+  coord(40003,40007, 3,20, 255, 170,245);
+  coord(40003,40007, 1,15, 235, 160,225);
+  // Extra trips for 40003 making them a frequency outlier
+  mkPass(40003,"Bathroom/Water",daysAgo(6,10),220); mkPass(40003,"Bathroom/Water",daysAgo(2,30),210);
+  mkPass(40003,"Bathroom/Water",daysAgo(0,120),230);
+
+  const passAttempts = [];
+  const seedAudit = [];
+
+  const activePasses = [];
+  const openPass=(sn,dest,minsAgo_)=>{const s=students.find(x=>x.student_number===String(sn));
+    activePasses.push({pass_id:uuid(),student_number:String(sn),grade:s.grade,classroom_id:s.classroom_id,
+      teacher_id:"",destination:dest,check_out_time:minsAgo(minsAgo_),status:"open",alert_state:"none",created_at:minsAgo(minsAgo_)});};
+  openPass(30003,"Bathroom/Water",3);
+  openPass(40002,"Office",12);
+
+  const pairRestrictions = [{
+    restriction_id:uuid(),student_a_number:"30002",student_b_number:"30005",grade:"3",
+    destination_scope:"Bathroom/Water",action_type:"delay",reason_category:"Socializing concern",
+    private_note:"Tend to meet in the hall.",active:true,created_by:"rivera@demo.school",
+    created_at:daysAgo(3),expires_at:""
+  }];
+  const groupRestrictions = [{
+    group_id:uuid(),group_name:"Table 4",student_numbers_json:JSON.stringify(["40003","40005","40007"]),
+    grade:"4",destination_scope:"Bathroom/Water",action_type:"delay",created_by:"chen@demo.school",
+    active:true,created_at:daysAgo(2)
+  }];
+
+  const settings = {};
+  Object.entries({
+    school_name:"Demo Elementary",school_domain:"demo.school",oauth_client_id:"",
+    school_year_start:"2025-08-18",school_year_end:"2026-06-04",
+    default_grade_alert_scope:"grade",ai_enabled:"false",
+    default_long_duration_minutes:"6",default_cooldown_minutes:"10",
+    default_overlap_window_minutes:"3",default_outlier_standard_deviation:"2",
+    not_returned_minutes:"15",max_concurrent_grade:"",max_concurrent_classroom:"2",
+    purge_mode:"remind_admin",device_key:"demo-room-112"
+  }).forEach(([k,v])=>settings[k]=v);
+
+  return { settings,teachers,classrooms,students,activePasses,passHistory,
+    passAttempts,pairRestrictions,groupRestrictions,alerts:[],teacherMessages:[
+      {message_id:uuid(),sender_email:"chen@demo.school",recipient_scope:"all",recipient_email:"",
+       grade:"4",message_text:"Nurse is out until 10:30 — please hold non-urgent nurse passes.",created_at:minsAgo(22),read_by_json:"[]"}
+    ],teacherNotes:[],auditLog:seedAudit};
+}
+
+/* ==================================================================
+   STORE
+   ================================================================== */
+let store;
+function loadStore(){
+  try{ const raw=localStorage.getItem(CONFIG.STORE_KEY); if(raw){ store=JSON.parse(raw); return; } }catch(e){}
+  store = buildSeed(); saveStore();
+}
+function saveStore(){ try{ localStorage.setItem(CONFIG.STORE_KEY, JSON.stringify(store)); }catch(e){} }
+function resetStore(){ store = buildSeed(); saveStore(); }
+
+const getSetting = (k)=> store.settings[k] ?? "";
+const setSetting = (k,v)=>{ store.settings[k]=String(v); };
+
+/* ==================================================================
+   MOCK BACKEND — mirrors backend/Code.gs pass engine
+   ================================================================== */
+const Mock = {
+  ping(){ return { version:"demo", ok:true }; },
+
+  student_entry(p){
+    // device key gate (demo: enforced if a key is set)
+    const key = getSetting("device_key");
+    if(key && String(p.device_key||"")!==String(key))
+      return studentErr("This device is not set up for the student portal. Please ask your teacher.");
+
+    const sn = String(p.student_number||"").trim();
+    if(!sn) return ok(sMsg("Please enter your student number.", {result:"need_number"}));
+
+    const student = store.students.find(s=> s.student_number===sn);
+    if(!student || !truthy(student.active)){
+      logAttempt(sn,"",p.destination,"denied","unknown_or_inactive","",false);
+      return ok(sMsg("We could not check you out. Please ask your teacher.", {result:"denied"}));
+    }
+    const dest = normDest(p.destination);
+    const active = store.activePasses.find(a=> a.student_number===sn && a.status==="open");
+    if(active) return ok(processReturn(active));
+
+    const d = evaluatePass(student, dest);
+    if(d.allowed){
+      createActivePass(student, dest);
+      logAttempt(sn,student.grade,dest,"allowed","ok","",false);
+      if(d.infoAlert) createAlert(d.infoAlert);
+      save();
+      return ok(sMsg("You are checked out. Please return as soon as you are done.", {result:"checked_out", destination:dest}));
+    }
+    const alertId = d.alert ? createAlert(d.alert).alert_id : "";
+    logAttempt(sn,student.grade,dest,d.result,d.reason_code,alertId,d.override_available);
+    save();
+    return ok(sMsg("Bathroom pass is not available yet. Please wait approximately "+(d.delay_minutes||5)+" minutes or ask your teacher.", {result:"delayed"}));
+  },
+
+  /* teacher/admin — in the demo, "session" stands in for a verified Google token */
+  list_active_passes(p,sess){ requireTeacher(sess);
+    const rows = store.activePasses.filter(a=>a.status==="open" && scopes(sess,a.grade)).map(a=>({
+      pass_id:a.pass_id, student_number:a.student_number, grade:a.grade, classroom_id:a.classroom_id,
+      destination:a.destination, check_out_time:a.check_out_time, elapsed_seconds:elapsed(a.check_out_time),
+      alert_state:a.alert_state, is_own_classroom:String(a.classroom_id)===String(sess.classroom_id)
+    }));
+    return ok({active_passes:rows, server_time:nowIso()});
+  },
+  list_students(p,sess){ requireTeacher(sess);
+    return ok({students: store.students.filter(s=>truthy(s.active)&&scopes(sess,s.grade)).map(s=>({
+      student_id:s.student_id, student_number:s.student_number, grade:s.grade, classroom_id:s.classroom_id, alert_exempt:truthy(s.alert_exempt), custom_cooldown_minutes:s.custom_cooldown_minutes||""
+    }))});
+  },
+  manual_return(p,sess){ requireTeacher(sess);
+    const a = store.activePasses.find(x=>x.pass_id===p.pass_id);
+    if(!a) throw E("No open pass found.");
+    if(!scopes(sess,a.grade)) throw E("Out of your grade scope.");
+    const dur = elapsed(a.check_out_time);
+    closePass(a, sess.email, "manual_return");
+    audit(sess,"manual_return","Pass",a.pass_id,"Manual return of student "+a.student_number+(p.reason?" ("+p.reason+")":""));
+    save(); return ok({ok:true, duration_seconds:dur});
+  },
+  override_pass(p,sess){ requireTeacher(sess);
+    const s = store.students.find(x=>x.student_number===String(p.student_number));
+    if(!s) throw E("Student not found.");
+    if(!scopes(sess,s.grade)) throw E("Out of your grade scope.");
+    if(store.activePasses.find(a=>a.student_number===s.student_number&&a.status==="open")) throw E("That student already has an open pass.");
+    createActivePass(s, normDest(p.destination));
+    audit(sess,"pass_override","Student",s.student_number,"Override granted pass for "+s.student_number);
+    save(); return ok({ok:true});
+  },
+  add_student(p,sess){ requireTeacher(sess);
+    const sn=String(p.student_number||"").trim(); if(!sn) throw E("Student number is required.");
+    const grade = p.grade ?? sess.grade, room = p.classroom_id ?? sess.classroom_id;
+    if(!scopes(sess,grade)) throw E("Out of your grade scope.");
+    if(store.students.find(s=>s.student_number===sn&&truthy(s.active))) throw E("A student with that number already exists.");
+    store.students.push({student_id:uuid(), student_number:sn, grade:String(grade), classroom_id:room,
+      active:true, alert_exempt:truthy(p.alert_exempt), exemption_scope_json:"", custom_cooldown_minutes:"", created_at:nowIso(), removed_at:""});
+    audit(sess,"student_added","Student",sn,"Added student "+sn);
+    save(); return ok({ok:true});
+  },
+  remove_student(p,sess){ requireTeacher(sess);
+    const sn=String(p.student_number||"").trim();
+    const s = store.students.find(x=>x.student_number===sn);
+    if(!s) throw E("Student not found.");
+    if(!scopes(sess,s.grade)) throw E("Out of your grade scope.");
+    let purged=0;
+    const drop=(arr,pred)=>{const before=arr.length; const kept=arr.filter(r=>!pred(r)); purged+=before-kept.length; return kept;};
+    store.students        = drop(store.students,        r=>r.student_number===sn);
+    store.activePasses    = drop(store.activePasses,    r=>r.student_number===sn);
+    store.passHistory     = drop(store.passHistory,     r=>r.student_number===sn);
+    store.passAttempts    = drop(store.passAttempts,    r=>r.student_number===sn);
+    store.pairRestrictions= drop(store.pairRestrictions,r=>r.student_a_number===sn||r.student_b_number===sn);
+    store.groupRestrictions=drop(store.groupRestrictions,r=>parseArr(r.student_numbers_json).includes(sn));
+    store.alerts          = drop(store.alerts,          r=>r.student_number===sn||r.related_student_number===sn);
+    store.teacherNotes    = drop(store.teacherNotes,    r=>r.student_number===sn);
+    audit(sess,"student_purged","Student","(redacted)","Student record and all linked data permanently purged. Rows removed: "+purged+".");
+    save(); return ok({ok:true, rows_purged:purged});
+  },
+  bulk_add_students(p,sess){ requireTeacher(sess);
+    const list=p.students||[]; if(!list.length) throw E("No rows to import.");
+    const existing=new Set(store.students.filter(s=>truthy(s.active)).map(s=>s.student_number));
+    let added=0; const skipped=[]; const seen=new Set();
+    list.forEach((s,i)=>{
+      const sn=String(s.student_number||"").trim(); const grade=s.grade??sess.grade;
+      if(!sn){skipped.push({row:i,reason:"missing_number"});return;}
+      if(existing.has(sn)||seen.has(sn)){skipped.push({row:i,student_number:sn,reason:"duplicate"});return;}
+      if(!scopes(sess,grade)){skipped.push({row:i,student_number:sn,reason:"out_of_scope"});return;}
+      seen.add(sn);
+      store.students.push({student_id:uuid(), student_number:sn, grade:String(grade),
+        classroom_id:s.classroom??s.classroom_id??sess.classroom_id, active:true,
+        alert_exempt:truthy(s.alert_exempt), exemption_scope_json:"", created_at:nowIso(), removed_at:""});
+      added++;
+    });
+    audit(sess,"bulk_import","Student","(batch)","Bulk import: "+added+" added, "+skipped.length+" skipped.");
+    save(); return ok({added, skipped});
+  },
+  create_pair_restriction(p,sess){ requireTeacher(sess);
+    const a=String(p.student_a_number||"").trim(), b=String(p.student_b_number||"").trim();
+    if(!a||!b) throw E("Both student numbers are required.");
+    if(a===b) throw E("A pair restriction needs two different students.");
+    const grade=p.grade??sess.grade; if(!scopes(sess,grade)) throw E("Out of your grade scope.");
+    store.pairRestrictions.push({restriction_id:uuid(), student_a_number:a, student_b_number:b, grade:String(grade),
+      destination_scope:p.destination_scope||"Bathroom/Water", action_type:p.action_type||"delay",
+      reason_category:p.reason_category||"Other", private_note:p.private_note||"", active:true,
+      created_by:sess.email, created_at:nowIso(), expires_at:p.expires_at||""});
+    audit(sess,"pair_restriction_created","PairRestriction","",("Pair restriction for "+a+" & "+b));
+    save(); return ok({ok:true});
+  },
+  set_student_cooldown(p,sess){ requireTeacher(sess);
+    const sn=String(p.student_number||"").trim();
+    const s=store.students.find(x=>x.student_number===sn&&truthy(x.active));
+    if(!s) throw E("Student not found.");
+    if(!scopes(sess,s.grade)) throw E("Out of your grade scope.");
+    const mins=String(p.minutes||"").trim();
+    // empty string = remove override (fall back to class default)
+    if(mins!==""&&(isNaN(parseFloat(mins))||parseFloat(mins)<0)) throw E("Enter a number of minutes, or leave blank to remove the override.");
+    s.custom_cooldown_minutes=mins;
+    audit(sess,"student_cooldown_set","Student",sn,
+      mins?"Custom cooldown of "+mins+" min set for student "+sn+".":"Custom cooldown removed for student "+sn+" (now uses class default).");
+    save(); return ok({ok:true, minutes:mins});
+  },
+  toggle_alert_exempt(p,sess){ requireTeacher(sess);
+    const sn=String(p.student_number||"").trim();
+    const s=store.students.find(x=>x.student_number===sn&&truthy(x.active));
+    if(!s) throw E("Student not found.");
+    if(!scopes(sess,s.grade)) throw E("Out of your grade scope.");
+    s.alert_exempt=!truthy(s.alert_exempt);
+    audit(sess, s.alert_exempt?"alert_exempt_added":"alert_exempt_removed","Student",sn,
+      (s.alert_exempt?"Alert exemption added":"Alert exemption removed")+" for student "+sn+".");
+    save(); return ok({ok:true, now_exempt:s.alert_exempt});
+  },
+  list_restrictions(p,sess){ requireTeacher(sess);
+    return ok({
+      pairs: store.pairRestrictions.filter(r=>scopes(sess,r.grade)),
+      groups: store.groupRestrictions.filter(r=>scopes(sess,r.grade))
+    });
+  },
+  list_alerts(p,sess){ requireTeacher(sess);
+    const status=p.status||"open";
+    const rows=store.alerts.filter(a=>a.status===status&&scopes(sess,a.grade)).sort((x,y)=>y.created_at.localeCompare(x.created_at));
+    return ok({alerts:rows});
+  },
+  acknowledge_alert(p,sess){ requireTeacher(sess);
+    const a=store.alerts.find(x=>x.alert_id===p.alert_id&&scopes(sess,x.grade));
+    if(!a) throw E("Alert not found or out of scope.");
+    a.status="acknowledged"; a.acknowledged_by=sess.email; a.acknowledged_at=nowIso();
+    audit(sess,"alert_acknowledged","Alert",a.alert_id,"Alert acknowledged.");
+    save(); return ok({ok:true});
+  },
+  send_message(p,sess){ requireTeacher(sess);
+    const text=String(p.message_text||"").trim(); if(!text) throw E("Message text is required.");
+    store.teacherMessages.push({message_id:uuid(), sender_email:sess.email, recipient_scope:p.recipient_scope||"grade",
+      recipient_email:p.recipient_email||"", grade:p.grade??sess.grade, message_text:text, created_at:nowIso(), read_by_json:"[]"});
+    audit(sess,"message_sent","TeacherMessage","","Message sent ("+(p.recipient_scope||"grade")+").");
+    save(); return ok({ok:true});
+  },
+  list_messages(p,sess){ requireTeacher(sess);
+    const isAdmin=isAdminRole(sess.role);
+    const rows=store.teacherMessages.filter(m=>{
+      const sc=m.recipient_scope||"";
+      if(sc==="all")return true; if(sc==="admin")return isAdmin;
+      if(sc==="teacher")return String(m.recipient_email).toLowerCase()===String(sess.email).toLowerCase();
+      return String(m.grade)===String(sess.grade)||isAdmin;
+    }).sort((x,y)=>y.created_at.localeCompare(x.created_at));
+    return ok({messages:rows.slice(0,100)});
+  },
+  set_setting(p,sess){ requireAdmin(sess); setSetting(p.key,p.value??""); audit(sess,"setting_changed","Settings",p.key,'Setting "'+p.key+'" updated.'); save(); return ok({ok:true}); },
+  list_settings(p,sess){ requireAdmin(sess); return ok({settings:store.settings}); },
+  list_audit(p,sess){ requireAdmin(sess); return ok({audit:[...store.auditLog].sort((x,y)=>y.created_at.localeCompare(x.created_at)).slice(0,200)}); }
+};
+
+/* ---- engine internals ---- */
+function evaluatePass(student, dest){
+  const sn=String(student.student_number), grade=student.grade, isBath=dest==="Bathroom/Water";
+  if(isBath){
+    // Per-student cooldown overrides class default when set.
+  const cdDefault=num(getSetting("default_cooldown_minutes"),0);
+  const cdStudent=num(student.custom_cooldown_minutes||"",NaN);
+  const cd=!isNaN(cdStudent)?cdStudent:cdDefault;
+  if(cd>0){ const last=mostRecentReturn(sn,"Bathroom/Water");
+      if(last){ const mins=(Date.now()-last)/60000;
+        if(mins<cd){ const rem=Math.ceil(cd-mins);
+          return delayed("cooldown",rem,false, A(grade,student.classroom_id,sn,"","cooldown","low",
+            "Student "+sn+" attempted a bathroom/water pass during the "+cd+"-minute cooldown. Pass was delayed.")); } } }
+  }
+  for(const pr of store.pairRestrictions.filter(r=>truthy(r.active)&&!expired(r.expires_at)&&inScope(dest,r.destination_scope)&&(r.student_a_number===sn||r.student_b_number===sn))){
+    const partner = pr.student_a_number===sn ? pr.student_b_number : pr.student_a_number;
+    const out = store.activePasses.find(a=>a.student_number===partner&&a.status==="open"&&inScope(a.destination,pr.destination_scope));
+    if(out){
+      const action=String(pr.action_type||"delay").toLowerCase();
+      const al=A(grade,student.classroom_id,sn,partner,"pair_restriction","medium",
+        "Student "+sn+" attempted to check out while Student "+partner+" was already out. These students have an active pair restriction. "+
+        (action==="alert_only"?"Pass was allowed (alert only).":"Pass was delayed pending teacher override."));
+      if(action==="alert_only") return {allowed:true, infoAlert:al};
+      return delayed("pair_restriction",5,true,al);
+    }
+  }
+  for(const gr of store.groupRestrictions.filter(r=>truthy(r.active)&&inScope(dest,r.destination_scope)&&parseArr(r.student_numbers_json).includes(sn))){
+    const members=parseArr(gr.student_numbers_json);
+    const out=store.activePasses.find(a=>a.status==="open"&&inScope(a.destination,gr.destination_scope)&&members.includes(a.student_number)&&a.student_number!==sn);
+    if(out) return delayed("group_restriction",5,true, A(grade,student.classroom_id,sn,out.student_number,"group_restriction","medium",
+      'Student '+sn+' attempted to check out while another member of group "'+gr.group_name+'" (Student '+out.student_number+') was already out. Pass was delayed pending teacher override.'));
+  }
+  if(isBath){
+    const gl=num(getSetting("max_concurrent_grade"),0), rl=num(getSetting("max_concurrent_classroom"),0);
+    if(gl>0 && store.activePasses.filter(a=>a.status==="open"&&String(a.grade)===String(grade)&&a.destination==="Bathroom/Water").length>=gl)
+      return delayed("grade_capacity",3,true, A(grade,student.classroom_id,sn,"","cooldown","low","Student "+sn+" was delayed: grade bathroom/water limit ("+gl+") reached."));
+    if(rl>0 && store.activePasses.filter(a=>a.status==="open"&&String(a.classroom_id)===String(student.classroom_id)&&a.destination==="Bathroom/Water").length>=rl)
+      return delayed("classroom_capacity",3,true, A(grade,student.classroom_id,sn,"","cooldown","low","Student "+sn+" was delayed: classroom bathroom/water limit ("+rl+") reached."));
+  }
+  return {allowed:true};
+}
+function delayed(code,mins,override,alert){ return {allowed:false, result:"delayed", reason_code:code, delay_minutes:mins, override_available:!!override, alert}; }
+function A(grade,room,sn,rel,type,sev,msg){ return {grade, classroom_id:room, student_number:sn, related_student_number:rel||"", alert_type:type, severity:sev, message:msg}; }
+function createActivePass(student,dest){ store.activePasses.push({pass_id:uuid(), student_number:String(student.student_number),
+  grade:student.grade, classroom_id:student.classroom_id, teacher_id:classroomTeacherId(student.classroom_id), destination:dest,
+  check_out_time:nowIso(), status:"open", alert_state:"none", created_at:nowIso()}); }
+function processReturn(a){ const dur=elapsed(a.check_out_time); closePass(a,"student","self_return"); save();
+  return sMsg("You are checked back in.", {result:"checked_in", duration_seconds:dur}); }
+function closePass(a, closedBy, method){
+  store.passHistory.push({pass_id:a.pass_id, student_number:a.student_number, grade:a.grade, classroom_id:a.classroom_id,
+    teacher_id:a.teacher_id, destination:a.destination, check_out_time:a.check_out_time, check_in_time:nowIso(),
+    duration_seconds:elapsed(a.check_out_time), closed_by:closedBy, closure_method:method, created_at:nowIso()});
+  store.activePasses = store.activePasses.filter(x=>x.pass_id!==a.pass_id);
+}
+function createAlert(a){ const row={alert_id:uuid(), grade:a.grade, classroom_id:a.classroom_id, student_number:a.student_number,
+  related_student_number:a.related_student_number||"", alert_type:a.alert_type, severity:a.severity||"medium", message:a.message,
+  status:"open", created_at:nowIso(), acknowledged_by:"", acknowledged_at:""}; store.alerts.push(row); return row; }
+function logAttempt(sn,grade,dest,result,reason,alertId,override){ store.passAttempts.push({attempt_id:uuid(), student_number:sn,
+  grade:grade||"", classroom_id:"", destination:dest||"", attempt_time:nowIso(), result, reason_code:reason||"",
+  teacher_alert_id:alertId||"", override_available:!!override, created_at:nowIso()}); }
+function audit(sess,action,recType,recId,summary){ store.auditLog.push({audit_id:uuid(), actor_email:sess?sess.email:"", actor_role:sess?sess.role:"",
+  action_type:action, affected_record_type:recType||"", affected_record_id:recId||"", summary:summary||"", created_at:nowIso()}); }
+
+function mostRecentReturn(sn,dest){ let latest=null; store.passHistory.forEach(r=>{ if(r.student_number===sn&&r.destination===dest){
+  const d=new Date(r.check_in_time).getTime(); if(!latest||d>latest) latest=d; }}); return latest; }
+function classroomTeacherId(room){ const c=store.classrooms.find(x=>x.classroom_id===room); return c?c.teacher_id:""; }
+function normDest(d){ const s=String(d||"").toLowerCase(); if(s==="nurse")return"Nurse"; if(s==="office")return"Office"; return"Bathroom/Water"; }
+function inScope(dest,scope){ const sc=String(scope||"").toLowerCase(); if(!sc||sc==="all")return true; return sc.includes(String(dest).toLowerCase()); }
+function elapsed(iso){ const d=new Date(iso).getTime(); return isNaN(d)?0:Math.max(0,Math.round((Date.now()-d)/1000)); }
+function expired(x){ if(!x)return false; const d=new Date(x).getTime(); return isNaN(d)?false:d<Date.now(); }
+function parseArr(s){ try{const a=JSON.parse(s); return Array.isArray(a)?a.map(String):[];}catch(e){return[];} }
+function scopes(sess,grade){ if(isAdminRole(sess.role))return true; return String(sess.grade)===String(grade); }
+function isAdminRole(r){ r=String(r||"").toLowerCase(); return r==="admin"||r==="administrator"; }
+function requireTeacher(sess){ if(!sess) throw E("Teacher sign-in required."); }
+function requireAdmin(sess){ requireTeacher(sess); if(!isAdminRole(sess.role)) throw E("Administrator access required."); }
+const ok=(data)=>({ok:true,data}); const sMsg=(m,x)=>Object.assign({studentMessage:m},x||{});
+const studentErr=(m)=>({ok:false, error:"bad_device", message:m, studentMessage:m});
+function E(m){ const e=new Error(m); return e; }
+function save(){ saveStore(); }
+
+/* ==================================================================
+   API LAYER — swap mock <-> live here
+   ================================================================== */
+async function api(action, params={}){
+  const liveUrl = localStorage.getItem(CONFIG.LIVE_URL_KEY);
+  if(liveUrl){
+    try{
+      const body = Object.assign({action}, params);
+      if(session && action!=="student_entry" && action!=="ping") body.id_token = session._token || "";
+      if(action==="student_entry") body.device_key = getSetting("device_key");
+      const res = await fetch(liveUrl, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(body)});
+      return await res.json();
+    }catch(err){ return {ok:false, error:"network", message:String(err)}; }
+  }
+  // mock
+  try{
+    const fn = Mock[action];
+    if(!fn) return {ok:false, error:"unknown_action", message:"Unknown action: "+action};
+    return fn(params, action==="student_entry"||action==="ping" ? null : session);
+  }catch(err){ return {ok:false, error:"error", message:err.message||String(err), studentMessage:err.studentMessage||null}; }
+}
+
+/* ==================================================================
+   UI STATE + ROUTER
+   ================================================================== */
+let session = null;          // teacher/admin "session" (demo stand-in for Google sign-in)
+let route = "console";       // console view key
+let kioskDest = "Bathroom/Water";
+let kioskNum = "";
+const app = $("#app");
+
+function render(){
+  if(!session){ renderKiosk(); }
+  else { renderConsole(); }
+}
+
+/* ---------------- KIOSK ---------------- */
+function renderKiosk(){
+  app.innerHTML = "";
+  app.appendChild(demoBar());
+  const k = el(`
+  <div class="kiosk">
+    <div class="kiosk-rail"></div>
+    <div class="kiosk-head">
+      <div class="kiosk-eyebrow">${esc(getSetting("school_name")||"Classroom")} · Room ${esc(roomNumberForKiosk())}</div>
+      <div class="kiosk-title">Hall Pass</div>
+      <div class="kiosk-sub">Enter your student number to check out or back in.</div>
+    </div>
+    <div class="kiosk-card">
+      <div class="numscreen">
+        <span class="label">Student #</span>
+        <span class="value ${kioskNum?"":"placeholder"}" id="numval">${kioskNum?esc(kioskNum):"— — — — —"}</span>
+      </div>
+      <div class="dests" id="dests">
+        ${destChip("Bathroom/Water","🚪","Bathroom / Water")}
+        ${destChip("Nurse","➕","Nurse")}
+        ${destChip("Office","🏫","Office")}
+      </div>
+      <div class="keypad" id="keypad">
+        ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="key" data-k="${n}">${n}</button>`).join("")}
+        <button class="key util" data-k="clear">Clear</button>
+        <button class="key" data-k="0">0</button>
+        <button class="key util" data-k="back">⌫</button>
+      </div>
+      <div style="margin-top:12px">
+        <button class="key go" id="checkbtn" style="width:100%;border-radius:14px;padding:16px;font-family:var(--font-ui);font-size:1.15rem;font-weight:700">Check Out / Return</button>
+      </div>
+    </div>
+    <div class="kiosk-foot">
+      <span class="dot"></span><span>Ready</span>
+      <button class="staff-link" id="staffbtn">Staff sign in →</button>
+    </div>
+    <div class="result" id="result"></div>
+  </div>`);
+  app.appendChild(k);
+
+  $("#dests").addEventListener("click", e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    kioskDest=b.dataset.dest; $$(".chip").forEach(c=>c.setAttribute("aria-pressed", c===b)); });
+  $("#keypad").addEventListener("click", e=>{ const b=e.target.closest(".key"); if(!b)return; keypad(b.dataset.k); });
+  $("#checkbtn").addEventListener("click", submitKiosk);
+  $("#staffbtn").addEventListener("click", openSignIn);
+  document.onkeydown = (e)=>{ if(session) return; if(/^[0-9]$/.test(e.key)) keypad(e.key);
+    else if(e.key==="Backspace") keypad("back"); else if(e.key==="Enter") submitKiosk(); };
+}
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+function destChip(val,ic,label){ return `<button class="chip" data-dest="${val}" aria-pressed="${kioskDest===val}"><span class="ic">${ic}</span>${esc(label)}</button>`; }
+function roomNumberForKiosk(){ const c=store.classrooms.find(x=>x.room_number); return c?c.room_number:"—"; }
+function keypad(k){ if(k==="clear")kioskNum=""; else if(k==="back")kioskNum=kioskNum.slice(0,-1);
+  else if(/^[0-9]$/.test(k)&&kioskNum.length<6)kioskNum+=k; const v=$("#numval");
+  if(v){ v.textContent=kioskNum||"— — — — —"; v.classList.toggle("placeholder",!kioskNum); } }
+async function submitKiosk(){
+  // This browser is the provisioned classroom device, so it presents its device key.
+  const r = await api("student_entry", {student_number:kioskNum, destination:kioskDest, device_key:getSetting("device_key")});
+  const msg = (r.data&&r.data.studentMessage) || r.studentMessage || "Please ask your teacher.";
+  const result = (r.data&&r.data.result) || r.result || "denied";
+  showResult(msg, result);
+  kioskNum=""; const v=$("#numval"); if(v){v.textContent="— — — — —"; v.classList.add("placeholder");}
+}
+function showResult(msg, result){
+  const wait = (result==="delayed"||result==="denied"||result==="need_number");
+  const icon = result==="checked_out"?"🟢":result==="checked_in"?"✅":result==="delayed"?"⏳":"ℹ️";
+  const title = result==="checked_out"?"Checked out":result==="checked_in"?"Welcome back":result==="delayed"?"Please wait":"Check again";
+  const r=$("#result");
+  r.innerHTML = `<div class="result-card ${wait?"wait":""}"><div class="big">${icon}</div><h2>${esc(title)}</h2><p>${esc(msg)}</p></div>`;
+  r.classList.add("show");
+  clearTimeout(showResult._t);
+  showResult._t = setTimeout(()=>r.classList.remove("show"), result==="delayed"?4200:2600);
+  r.onclick=()=>r.classList.remove("show");
+}
+
+/* ---------------- SIGN IN (demo stand-in for Google Workspace) ---------------- */
+function openSignIn(){
+  const opts = store.teachers.filter(t=>truthy(t.active)).map(t=>{
+    const initials=t.display_name.split(" ").map(w=>w[0]).slice(0,2).join("");
+    return `<button class="signin-opt" data-email="${esc(t.email)}">
+      <span class="av">${esc(initials)}</span>
+      <span><span class="nm">${esc(t.display_name)}</span><br><span class="rl ${isAdminRole(t.role)?"admin":""}">${isAdminRole(t.role)?"Administrator":"Teacher · Grade "+esc(t.grade)+" · Room "+esc(t.classroom_id)}</span></span>
+    </button>`;
+  }).join("");
+  showModal({
+    title:"Staff sign in",
+    desc:"In the deployed app this is a Google Workspace sign-in, verified on the server. For the demo, pick a staff member.",
+    bodyHtml:`<div class="signin-list">${opts}</div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button>`,
+    onMount:(m)=>{ m.querySelectorAll(".signin-opt").forEach(b=>b.onclick=()=>{ doSignIn(b.dataset.email); closeModal(); }); }
+  });
+}
+async function doSignIn(email){
+  const t = store.teachers.find(x=>x.email===email);
+  session = {email:t.email, display_name:t.display_name, role:t.role, grade:t.grade, classroom_id:t.classroom_id};
+  t.last_login_at=nowIso(); audit(session,"teacher_login","Teacher",t.teacher_id,"Teacher signed in."); save();
+  route = "board";
+  render();
+  if(!localStorage.getItem("hallpass_seen_tour")) setTimeout(openTour, 350);
+}
+function signOut(){ session=null; route="console"; document.onkeydown=null; render(); }
+
+/* ---------------- CONSOLE ---------------- */
+function renderConsole(){
+  app.innerHTML="";
+  app.appendChild(demoBar());
+  const openAlerts = store.alerts.filter(a=>a.status==="open"&&scopes(session,a.grade)).length;
+  const shell = el(`
+  <div class="console">
+    <div class="topbar">
+      <div class="brandmark"><span class="glyph">H</span>Hall Pass</div>
+      <span class="who">${esc(session.display_name)} · <b>${isAdminRole(session.role)?"Administrator":"Grade "+esc(session.grade)+" · "+esc(session.classroom_id)}</b></span>
+      <span class="spacer"></span>
+      <span class="clock" id="clock"></span>
+      <button class="lockbtn" id="lockbtn">🔒 Lock to student portal</button>
+    </div>
+    <div class="console-body">
+      <nav class="nav" id="nav">
+        <div class="navlabel">Today</div>
+        ${navBtn("board","🪧","Out board", openAlerts)}
+        ${navBtn("alerts","🔔","Alerts")}
+        ${navBtn("messages","💬","Messages")}
+        <div class="sep"></div>
+        <div class="navlabel">Manage</div>
+        ${navBtn("students","👧","Students")}
+        ${navBtn("restrictions","⛔","Restrictions")}
+        <div class="sep"></div>
+        <div class="navlabel">Analyze</div>
+        ${navBtn("insights","📊","Insights")}
+        ${navBtn("assistant","🤖","Assistant")}
+        ${isAdminRole(session.role)?`<div class="sep"></div><div class="navlabel">Admin</div>${navBtn("settings","⚙️","Settings")}${navBtn("audit","📜","Audit log")}`:""}
+      </nav>
+      <main class="view" id="view"></main>
+    </div>
+  </div>`);
+  app.appendChild(shell);
+  $("#nav").addEventListener("click", e=>{ const b=e.target.closest("button[data-route]"); if(!b)return; route=b.dataset.route; renderConsole(); });
+  $("#lockbtn").addEventListener("click", signOut);
+  tickClock();
+  renderView();
+}
+function navBtn(key,ic,label,tag){ return `<button data-route="${key}" class="${route===key?"active":""}"><span class="ic">${ic}</span>${esc(label)}${tag?`<span class="navtag">${tag}</span>`:""}</button>`; }
+function tickClock(){ const c=$("#clock"); if(c) c.textContent=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
+
+function renderView(){
+  const v=$("#view"); if(!v)return;
+  ({board:viewBoard, alerts:viewAlerts, messages:viewMessages, students:viewStudents,
+    restrictions:viewRestrictions, insights:viewInsights, assistant:viewAssistant,
+    settings:viewSettings, audit:viewAudit, console:viewBoard}[route]||viewBoard)(v);
+}
+
+/* ---- Out board (hero) ---- */
+async function viewBoard(v){
+  const [passesR, alertsR] = await Promise.all([api("list_active_passes"), api("list_alerts",{status:"open"})]);
+  const passes=passesR.data.active_passes, alerts=alertsR.data.alerts;
+  const longMin=num(getSetting("default_long_duration_minutes"),6), notRet=num(getSetting("not_returned_minutes"),15);
+  v.innerHTML=`
+    <div class="view-head"><h1>Out board</h1><span class="sub">Live — students currently out in ${isAdminRole(session.role)?"the school":"grade "+esc(session.grade)}</span>
+      <span class="spacer"></span>
+      <button class="btn ghost sm" id="addStu">+ Add student</button>
+      <button class="btn sm" id="ovr">Override a pass</button>
+    </div>
+    <div class="board">
+      <div class="panel"><div class="panel-head">🪧 Out now <span class="count" id="outcount"></span></div>
+        <div class="panel-body" id="outlist"></div></div>
+      <div class="panel"><div class="panel-head">🔔 Open alerts <span class="count">${alerts.length}</span></div>
+        <div class="panel-body" id="alertmini"></div></div>
+    </div>`;
+  paintPasses(passes, longMin, notRet);
+  $("#alertmini").innerHTML = alerts.length ? alerts.slice(0,8).map(alertRow).join("") :
+    `<div class="empty"><div class="big">✓</div>No open alerts.</div>`;
+  $("#alertmini").addEventListener("click", onAlertAck);
+  $("#outlist").addEventListener("click", onPassAction);
+  $("#addStu").onclick=()=>openAddStudent();
+  $("#ovr").onclick=()=>openOverride();
+}
+function paintPasses(passes, longMin, notRet){
+  const list=$("#outlist"); if(!list)return;
+  $("#outcount") && ($("#outcount").textContent=passes.length);
+  if(!passes.length){ list.innerHTML=`<div class="empty"><div class="big">🚪</div>No one is out right now.</div>`; return; }
+  list.innerHTML = passes.sort((a,b)=>b.elapsed_seconds-a.elapsed_seconds).map(p=>{
+    const mins=p.elapsed_seconds/60; const st = mins>=notRet?"over":mins>=longMin?"wait":"go";
+    return `<div class="pass s-${st}" data-pass="${p.pass_id}" style="margin-bottom:10px">
+      <span class="statuslight ${st}"></span>
+      <span class="num">${esc(p.student_number)}</span>
+      <span class="meta"><span class="d">${esc(p.destination)}</span><span class="room">Room ${esc(p.classroom_id)}${p.is_own_classroom?" · your class":""}</span></span>
+      <span class="timer"><span class="t" data-since="${esc(p.check_out_time)}">${fmtDur(p.elapsed_seconds)}</span><span class="lbl">${st==="over"?"not returned":"elapsed"}</span></span>
+      <button class="btn ghost sm ret" data-return="${p.pass_id}">Mark in</button>
+    </div>`;
+  }).join("");
+}
+async function onPassAction(e){ const b=e.target.closest("[data-return]"); if(!b)return;
+  const r=await api("manual_return",{pass_id:b.dataset.return, reason:"Marked from board"});
+  if(r.ok){ toast("Marked returned · "+fmtDur(r.data.duration_seconds)); renderView(); } else toast(r.message); }
+async function onAlertAck(e){ const b=e.target.closest("[data-ack]"); if(!b)return;
+  const r=await api("acknowledge_alert",{alert_id:b.dataset.ack}); if(r.ok){ toast("Alert acknowledged"); renderConsole(); } else toast(r.message); }
+function alertRow(a){ return `<div class="alertrow"><span class="sev sev-${esc(a.severity)}"></span>
+  <span class="msg">${esc(a.message)}</span>
+  <button class="btn ghost sm" data-ack="${esc(a.alert_id)}">Done</button></div>`; }
+
+/* ---- alerts ---- */
+async function viewAlerts(v){
+  const r=await api("list_alerts",{status:"open"}); const alerts=r.data.alerts;
+  v.innerHTML=`<div class="view-head"><h1>Alerts</h1><span class="sub">Decision support — review context before acting</span></div>
+    <div class="panel"><div class="panel-body" id="alist">${alerts.length?alerts.map(alertRow).join(""):`<div class="empty"><div class="big">✓</div>No open alerts.</div>`}</div></div>`;
+  $("#alist").addEventListener("click", onAlertAck);
+}
+
+/* ---- messages ---- */
+async function viewMessages(v){
+  const r=await api("list_messages"); const msgs=r.data.messages;
+  v.innerHTML=`<div class="view-head"><h1>Messages</h1><span class="sub">Coordinate with other teachers</span><span class="spacer"></span>
+    <button class="btn sm" id="newmsg">+ New message</button></div>
+    <div class="panel"><div class="panel-body">${msgs.length?msgs.map(m=>`
+      <div class="alertrow"><span class="sev sev-low"></span><span class="msg"><b>${esc(senderName(m.sender_email))}</b>
+        <span style="color:var(--ink-faint)">· ${esc(scopeLabel(m))}</span><br>${esc(m.message_text)}</span>
+        <span class="when">${esc(timeAgo(m.created_at))}</span></div>`).join(""):`<div class="empty">No messages yet.</div>`}</div></div>`;
+  $("#newmsg").onclick=openNewMessage;
+}
+function senderName(email){ const t=store.teachers.find(x=>x.email===email); return t?t.display_name:email; }
+function scopeLabel(m){ return ({all:"All staff",admin:"Admin",grade:"Grade "+m.grade,teacher:"Direct"}[m.recipient_scope]||m.recipient_scope); }
+
+/* ---- students ---- */
+async function viewStudents(v){
+  const r=await api("list_students"); const studs=r.data.students.sort((a,b)=>a.student_number.localeCompare(b.student_number));
+  v.innerHTML=`<div class="view-head"><h1>Students</h1><span class="sub">${studs.length} active · minimal records (number only)</span><span class="spacer"></span>
+    <button class="btn ghost sm" id="classrules">Class rules</button><button class="btn ghost sm" id="bulk">Bulk add</button><button class="btn sm" id="add">+ Add student</button></div>
+    <div class="panel"><table class="grid"><thead><tr><th>Number</th><th>Grade</th><th>Room</th><th>Cooldown</th><th>Alerts</th><th></th></tr></thead>
+    <tbody>${studs.map(s=>`<tr><td class="mono"><b>${esc(s.student_number)}</b></td><td>${esc(s.grade)}</td><td>${esc(s.classroom_id)}</td>
+      <td class="mono">${s.custom_cooldown_minutes?s.custom_cooldown_minutes+"m <span style=\"color:var(--ink-faint);font-size:.78rem\">custom</span>":'<span style="color:var(--ink-faint)">class default</span>'}</td>
+      <td>${s.alert_exempt?'<span class="tag exempt">exempt</span>':'<span style="color:var(--ink-faint)">tracked</span>'}</td>
+      <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end">
+        <button class="btn ghost sm" data-toggle-exempt="${esc(s.student_number)}" title="${s.alert_exempt?"Remove alert exemption":"Mark as alert-exempt"}">${s.alert_exempt?"Remove exemption":"Exempt"}</button>
+        <button class="btn ghost sm" data-remove="${esc(s.student_number)}">Remove</button></td></tr>`).join("")}</tbody></table></div>`;
+  $("#add").onclick=openAddStudent; $("#bulk").onclick=openBulkAdd; $("#classrules").onclick=openClassRules;
+  v.querySelector("tbody").addEventListener("click", async e=>{
+    const br=e.target.closest("[data-remove]"); if(br){ openRemoveStudent(br.dataset.remove); return; }
+    const bc=e.target.closest("[data-set-cooldown]");
+    if(bc){ openSetCooldown(bc.dataset.setCooldown, bc.dataset.currentCd); return; }
+    const bt=e.target.closest("[data-toggle-exempt]");
+    if(bt){ const r=await api("toggle_alert_exempt",{student_number:bt.dataset.toggleExempt});
+      if(r.ok){ toast(r.data.now_exempt?"Alert exemption added":"Alert exemption removed"); renderView(); } else toast(r.message); }
+  });
+}
+
+/* ---- restrictions ---- */
+async function viewRestrictions(v){
+  const r=await api("list_restrictions"); const {pairs,groups}=r.data;
+  v.innerHTML=`<div class="view-head"><h1>Restrictions</h1><span class="sub">Reasons never appear on the student screen</span><span class="spacer"></span>
+    <button class="btn sm" id="newpair">+ Pair restriction</button></div>
+    <div class="panel" style="margin-bottom:16px"><div class="panel-head">Pairs <span class="count">${pairs.length}</span></div>
+      <div class="panel-body">${pairs.length?pairs.map(p=>`<div class="alertrow"><span class="sev sev-medium"></span>
+        <span class="msg"><b class="mono">${esc(p.student_a_number)}</b> & <b class="mono">${esc(p.student_b_number)}</b> · ${esc(p.action_type)} · ${esc(p.destination_scope)}
+        <br><span style="color:var(--ink-faint);font-size:.85rem">${esc(p.reason_category)}${p.private_note?" — "+esc(p.private_note):""}</span></span></div>`).join(""):`<div class="empty">No pair restrictions.</div>`}</div></div>
+    <div class="panel"><div class="panel-head">Groups <span class="count">${groups.length}</span></div>
+      <div class="panel-body">${groups.length?groups.map(g=>`<div class="alertrow"><span class="sev sev-medium"></span>
+        <span class="msg"><b>${esc(g.group_name)}</b> · only one out at a time · ${esc(g.destination_scope)}
+        <br><span class="mono" style="color:var(--ink-faint);font-size:.85rem">${parseArr(g.student_numbers_json).map(esc).join(", ")}</span></span></div>`).join(""):`<div class="empty">No group restrictions.</div>`}</div></div>`;
+  $("#newpair").onclick=openNewPair;
+}
+
+/* ---- settings (admin) ---- */
+async function viewSettings(v){
+  const s=store.settings;
+  const live=localStorage.getItem(CONFIG.LIVE_URL_KEY)||"";
+  v.innerHTML=`<div class="view-head"><h1>Settings</h1><span class="sub">School-wide configuration</span></div>
+    <div class="panel" style="margin-bottom:16px"><div class="panel-head">School year & passes</div><div class="panel-body">
+      <div class="row2">
+        ${setField("school_year_end","School year end date","date",s.school_year_end,"At year end, movement history is purged per your policy.")}
+        ${setField("purge_mode","End-of-year purge","select",s.purge_mode,"Default is remind admin (not automatic).",["remind_admin","export_then_purge","purge_automatically"])}
+      </div>
+      <div class="row2">
+        ${setField("default_long_duration_minutes","Long-trip alert (min)","number",s.default_long_duration_minutes,"Flag a trip that runs long.")}
+        ${setField("not_returned_minutes","Not-returned alert (min)","number",s.not_returned_minutes,"Flag a pass left open too long.")}
+      </div>
+      <div class="row2">
+        ${setField("default_cooldown_minutes","Bathroom cooldown (min)","number",s.default_cooldown_minutes,"Minimum gap between a student's bathroom trips.")}
+        ${setField("max_concurrent_classroom","Max out per class","number",s.max_concurrent_classroom,"Blank = no limit.")}
+      </div>
+    </div></div>
+    <div class="panel" style="margin-bottom:16px"><div class="panel-head">Security & privacy</div><div class="panel-body">
+      <div class="row2">
+        ${setField("device_key","Student device key","text",s.device_key,"The kiosk must present this key. Set before go-live.")}
+        ${setField("ai_enabled","AI assistant","select",s.ai_enabled,"Phase 2. Off by default for student privacy.",["false","true"])}
+      </div>
+      <div class="field"><label>Backend URL (live mode) <span class="help" title="Paste your deployed Apps Script /exec URL to switch this same app off the demo data and onto your real Google Sheet.">?</span></label>
+        <input id="liveurl" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(live)}"/>
+        <div style="font-size:.8rem;color:var(--ink-faint);margin-top:4px">Leave blank to keep using demo data.</div></div>
+    </div></div>
+    <div class="panel"><div class="panel-head">Demo</div><div class="panel-body" style="display:flex;gap:10px;align-items:center">
+      <button class="btn ghost sm" id="reseed">Reset demo data</button>
+      <span style="font-size:.85rem;color:var(--ink-faint)">Restores the seeded students, restrictions, and sample passes.</span>
+    </div></div>`;
+  v.addEventListener("change", async e=>{ const f=e.target.closest("[data-setting]"); if(f){ await api("set_setting",{key:f.dataset.setting,value:f.value}); toast("Saved"); if(["default_long_duration_minutes","not_returned_minutes"].includes(f.dataset.setting)) {} } });
+  $("#liveurl").addEventListener("change", e=>{ const u=e.target.value.trim();
+    if(u) localStorage.setItem(CONFIG.LIVE_URL_KEY,u); else localStorage.removeItem(CONFIG.LIVE_URL_KEY);
+    toast(u?"Live mode set — reload to use it":"Back to demo data"); });
+  $("#reseed").onclick=()=>{ resetStore(); toast("Demo data reset"); renderConsole(); };
+}
+function setField(key,label,type,val,help,opts){
+  if(type==="select"){ return `<div class="field"><label>${esc(label)} ${help?`<span class="help" title="${esc(help)}">?</span>`:""}</label>
+    <select data-setting="${key}">${opts.map(o=>`<option value="${esc(o)}" ${String(val)===o?"selected":""}>${esc(o.replace(/_/g," "))}</option>`).join("")}</select></div>`; }
+  return `<div class="field"><label>${esc(label)} ${help?`<span class="help" title="${esc(help)}">?</span>`:""}</label>
+    <input data-setting="${key}" type="${type}" value="${esc(val)}"/></div>`;
+}
+
+/* ---- audit (admin) ---- */
+async function viewAudit(v){
+  const r=await api("list_audit"); const rows=r.data.audit;
+  v.innerHTML=`<div class="view-head"><h1>Audit log</h1><span class="sub">Every sensitive action is recorded</span></div>
+    <div class="panel"><table class="grid"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead>
+    <tbody>${rows.length?rows.map(a=>`<tr><td class="mono" style="white-space:nowrap">${esc(timeAgo(a.created_at))}</td>
+      <td>${esc(a.actor_email||"system")}</td><td><span class="tag" style="background:var(--surface-2)">${esc(a.action_type)}</span></td>
+      <td>${esc(a.summary)}</td></tr>`).join(""):`<tr><td colspan="4"><div class="empty">No audit entries yet.</div></td></tr>`}</tbody></table></div>`;
+}
+
+/* ==================================================================
+   MODALS / FORMS
+   ================================================================== */
+function showModal({title,desc,bodyHtml,footHtml,onMount}){
+  const scrim=$("#scrim");
+  scrim.innerHTML=`<div class="modal"><div class="modal-head"><h2>${esc(title)}</h2>${desc?`<p>${esc(desc)}</p>`:""}</div>
+    <div class="modal-body">${bodyHtml}</div><div class="modal-foot">${footHtml||""}</div></div>`;
+  scrim.classList.add("show");
+  scrim.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeModal);
+  scrim.onclick=(e)=>{ if(e.target===scrim) closeModal(); };
+  if(onMount) onMount(scrim.querySelector(".modal"));
+}
+function closeModal(){ const s=$("#scrim"); s.classList.remove("show"); s.innerHTML=""; }
+
+function openSetCooldown(sn, currentMins){
+  const classCd = getSetting("default_cooldown_minutes") || "10";
+  const curLabel = currentMins ? currentMins+" min (custom)" : "class default ("+classCd+" min)";
+  showModal({
+    title: "Cooldown — student "+sn,
+    desc: "Set how long this student must wait between bathroom/water trips. Leave blank to follow the class default.",
+    bodyHtml: [
+      '<div class="field"><label>Custom cooldown (minutes)',
+      '  <span class="help" title="Overrides the class-wide cooldown for this student only. Leave blank to use the class default.">?</span></label>',
+      '  <input id="cd_mins" type="number" min="0" max="120" placeholder="Class default ('+esc(classCd)+' min)" value="'+esc(currentMins||'')+'"/>',
+      '  <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Current: '+esc(curLabel)+'. Set to 0 to remove any cooldown for this student.</div></div>',
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">',
+      '  <span style="font-size:.85rem;color:var(--ink-soft)">Quick set:</span>',
+      [5,10,15,20,30].map(function(m){ return '<button class="btn ghost sm" data-quick="'+m+'">'+m+' min</button>'; }).join(""),
+      '</div>'
+    ].join(""),
+    footHtml: '<button class="btn ghost" data-close>Cancel</button><button class="btn ghost" id="cd_clear">Remove override</button><button class="btn go" id="cd_save">Save</button>',
+    onMount: function(m){
+      m.querySelectorAll("[data-quick]").forEach(function(b){ b.onclick=function(){ $("#cd_mins").value=b.dataset.quick; }; });
+      m.querySelector("#cd_clear").onclick = async function(){
+        var r = await api("set_student_cooldown",{student_number:sn, minutes:""});
+        if(r.ok){ toast("Override removed — using class default ("+classCd+" min)"); closeModal(); renderView(); } else toast(r.message);
+      };
+      m.querySelector("#cd_save").onclick = async function(){
+        var r = await api("set_student_cooldown",{student_number:sn, minutes:$("#cd_mins").value});
+        if(r.ok){ var v=r.data.minutes; toast(v ? "Custom cooldown set: "+v+" min" : "Override removed"); closeModal(); renderView(); } else toast(r.message);
+      };
+    }
+  });
+}
+
+function openClassRules(){
+  const cd      = getSetting("default_cooldown_minutes") || "10";
+  const maxRoom = getSetting("max_concurrent_classroom") || "";
+  showModal({
+    title: "Class rules",
+    desc: "These apply to your whole class. Per-student cooldowns override the class-wide cooldown for that student only.",
+    bodyHtml: [
+      '<div class="field"><label>Class-wide bathroom cooldown (minutes)',
+      '  <span class="help" title="After returning from a bathroom/water trip, students must wait this many minutes before going again. Set to 0 to disable.">?</span></label>',
+      '  <input id="cr_cd" type="number" min="0" max="120" value="'+esc(cd)+'" placeholder="0 = no cooldown"/>',
+      '  <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Current: '+esc(cd||"none")+' min. Students with a personal cooldown are unaffected by changes here.</div></div>',
+      '<div class="field"><label>Max students out at once (this classroom)',
+      '  <span class="help" title="When this limit is reached, the next student sees a delay. Leave blank for no limit.">?</span></label>',
+      '  <input id="cr_room" type="number" min="0" max="10" value="'+esc(maxRoom)+'" placeholder="Blank = no limit"/>',
+      '  <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Current: '+esc(maxRoom||"no limit")+'.</div></div>'
+    ].join(""),
+    footHtml: '<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="cr_save">Save class rules</button>',
+    onMount: function(m){
+      m.querySelector("#cr_save").onclick = async function(){
+        await api("set_setting",{key:"default_cooldown_minutes", value:$("#cr_cd").value});
+        await api("set_setting",{key:"max_concurrent_classroom",  value:$("#cr_room").value});
+        toast("Class rules saved"); closeModal();
+      };
+    }
+  });
+}
+
+function openAddStudent(){
+  showModal({ title:"Add student", desc:"Minimal record — a number is all that's required.",
+    bodyHtml:`<div class="field"><label>Student number</label><input id="f_sn" inputmode="numeric" placeholder="e.g. 30011"/></div>
+      <div class="row2"><div class="field"><label>Grade</label><input id="f_gr" value="${esc(session.grade||"")}"/></div>
+      <div class="field"><label>Classroom</label><input id="f_room" value="${esc(session.classroom_id||"")}"/></div></div>
+      <div class="field"><label><input type="checkbox" id="f_ex" style="width:auto;margin-right:6px"/>Exempt from frequency/duration alerts</label></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="save">Add student</button>`,
+    onMount:(m)=>{ m.querySelector("#save").onclick=async()=>{
+      const r=await api("add_student",{student_number:$("#f_sn").value,grade:$("#f_gr").value,classroom_id:$("#f_room").value,alert_exempt:$("#f_ex").checked});
+      if(r.ok){ toast("Student added"); closeModal(); renderView(); } else toast(r.message); }; }});
+}
+function openRemoveStudent(sn){
+  showModal({ title:"Remove student "+sn,
+    desc:"Removing this student permanently deletes all records connected to this number — pass history, alerts, notes, restrictions, and AI logs. This cannot be undone.",
+    bodyHtml:`<div class="field"><label>Type the student number to confirm</label><input id="f_confirm" placeholder="${esc(sn)}"/></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="del">Permanently remove</button>`,
+    onMount:(m)=>{ m.querySelector("#del").onclick=async()=>{
+      if($("#f_confirm").value.trim()!==sn){ toast("Number doesn't match"); return; }
+      const r=await api("remove_student",{student_number:sn});
+      if(r.ok){ toast("Removed · "+r.data.rows_purged+" rows purged"); closeModal(); renderView(); } else toast(r.message); }; }});
+}
+function openBulkAdd(){
+  showModal({ title:"Bulk add students", desc:"Paste rows as: number, grade, classroom (one per line). Matches the students.csv format.",
+    bodyHtml:`<div class="field"><textarea id="f_csv" rows="8" placeholder="30011, 3, 3A&#10;30012, 3, 3A"></textarea></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="imp">Preview & import</button>`,
+    onMount:(m)=>{ m.querySelector("#imp").onclick=async()=>{
+      const rows=$("#f_csv").value.trim().split(/\r?\n/).filter(Boolean).map(line=>{
+        const [n,g,c]=line.split(",").map(x=>x.trim()); return {student_number:n,grade:g,classroom:c}; });
+      const r=await api("bulk_add_students",{students:rows});
+      if(r.ok){ toast("Imported "+r.data.added+" · skipped "+r.data.skipped.length); closeModal(); renderView(); } else toast(r.message); }; }});
+}
+function openOverride(){
+  showModal({ title:"Override — grant a pass", desc:"Use when you've decided a delayed student may go.",
+    bodyHtml:`<div class="field"><label>Student number</label><input id="o_sn" inputmode="numeric"/></div>
+      <div class="field"><label>Destination</label><select id="o_dest"><option>Bathroom/Water</option><option>Nurse</option><option>Office</option></select></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="go">Grant pass</button>`,
+    onMount:(m)=>{ m.querySelector("#go").onclick=async()=>{
+      const r=await api("override_pass",{student_number:$("#o_sn").value,destination:$("#o_dest").value});
+      if(r.ok){ toast("Pass granted"); closeModal(); route="board"; renderConsole(); } else toast(r.message); }; }});
+}
+function openNewPairPrefilled(a,b){
+  openNewPair(a,b);
+}
+function openNewPair(prefillA,prefillB){
+  showModal({ title:"New pair restriction", desc:"These two shouldn't be out at the same time. The student screen never shows why.",
+    bodyHtml:`<div class="row2"><div class="field"><label>Student A</label><input id="p_a" inputmode="numeric" value="${esc(prefillA||'')}"/></div>
+      <div class="field"><label>Student B</label><input id="p_b" inputmode="numeric" value="${esc(prefillB||'')}"/></div></div>
+      <div class="row2"><div class="field"><label>When both try to go</label><select id="p_action">
+        <option value="delay">Delay & notify</option><option value="require_approval">Require approval</option>
+        <option value="block">Block while other is out</option><option value="alert_only">Alert only</option></select></div>
+      <div class="field"><label>Reason</label><select id="p_reason"><option>Socializing concern</option><option>Prior conflict</option>
+        <option>Teacher observation</option><option>Administrator request</option><option>Other</option></select></div></div>
+      <div class="field"><label>Private note (staff only)</label><input id="p_note"/></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="cp">Create</button>`,
+    onMount:(m)=>{ m.querySelector("#cp").onclick=async()=>{
+      const r=await api("create_pair_restriction",{student_a_number:$("#p_a").value,student_b_number:$("#p_b").value,
+        action_type:$("#p_action").value,reason_category:$("#p_reason").value,private_note:$("#p_note").value});
+      if(r.ok){ toast("Restriction created"); closeModal(); renderView(); } else toast(r.message); }; }});
+}
+function openNewMessage(){
+  showModal({ title:"New message",
+    bodyHtml:`<div class="field"><label>Send to</label><select id="m_scope">
+      <option value="grade">My grade</option><option value="all">All staff</option><option value="admin">Administrator</option></select></div>
+      <div class="field"><label>Message</label><textarea id="m_text" rows="3" placeholder="e.g. Bathroom closed temporarily."></textarea></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn" id="sm">Send</button>`,
+    onMount:(m)=>{ m.querySelector("#sm").onclick=async()=>{
+      const r=await api("send_message",{recipient_scope:$("#m_scope").value,message_text:$("#m_text").value});
+      if(r.ok){ toast("Message sent"); closeModal(); renderView(); } else toast(r.message); }; }});
+}
+
+/* ---- first-run tour ---- */
+function openTour(){
+  showModal({ title:"Welcome to the console", desc:"A 20-second orientation.",
+    bodyHtml:`<div style="display:flex;flex-direction:column;gap:12px;font-size:.95rem">
+      <div><b>🪧 Out board</b> — everyone currently out, with a live timer. Tags turn amber when a trip runs long and red when a pass is left open.</div>
+      <div><b>🔔 Alerts</b> — decision support, never accusations. The student screen never sees these reasons.</div>
+      <div><b>👧 Students</b> — minimal records (a number, not a name). Removing a student purges all of their data immediately.</div>
+      <div><b>🔒 Lock to student portal</b> — top right. Returns the Chromebook to the kiosk; the console can't be reached again without signing in.</div>
+    </div>`,
+    footHtml:`<button class="btn go" data-close id="done">Got it</button>`,
+    onMount:()=>{ localStorage.setItem("hallpass_seen_tour","1"); }});
+}
+
+/* ==================================================================
+   ANALYTICS — Insights + Assistant
+   In the demo these compute locally from the store; nothing leaves the
+   browser. In the deployed app this is Phase 2, computed server-side,
+   and any AI is admin-gated and aggregate-only.
+   ================================================================== */
+function mean(a){ return a.length? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+function median(a){ if(!a.length)return 0; const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+function sd(a){ if(a.length<2)return 0; const m=mean(a); return Math.sqrt(mean(a.map(x=>(x-m)*(x-m)))); }
+function pctAtOrBelow(arr,val){ if(!arr.length)return 0; return Math.round(100*arr.filter(x=>x<=val).length/arr.length); }
+function windowStart(win){ if(win==="all")return 0; const d=new Date(); d.setDate(d.getDate()-7); return d.getTime(); }
+
+function computeStats(sess, win){
+  const start=windowStart(win), inWin=(iso)=>new Date(iso).getTime()>=start;
+  const scoped=store.students.filter(s=>truthy(s.active)&&scopes(sess,s.grade));
+  const k=num(getSetting("default_outlier_standard_deviation"),2);
+  const hist=store.passHistory.filter(h=>scopes(sess,h.grade)&&inWin(h.check_out_time));
+  const attempts=store.passAttempts.filter(a=>scopes(sess,a.grade)&&inWin(a.attempt_time));
+  const overrides=store.auditLog.filter(a=>a.action_type==="pass_override"&&inWin(a.created_at));
+
+  const rows=scoped.map(s=>{
+    const sn=s.student_number;
+    const bath=hist.filter(h=>h.student_number===sn&&h.destination==="Bathroom/Water");
+    const durs=bath.map(h=>h.duration_seconds);
+    return { sn, grade:s.grade, room:s.classroom_id, exempt:truthy(s.alert_exempt), customCd:s.custom_cooldown_minutes||"", trips:bath.length, durs,
+      avg:Math.round(mean(durs)), median:Math.round(median(durs)), longest:durs.length?Math.max(...durs):0,
+      total:durs.reduce((x,y)=>x+y,0),
+      nurse:hist.filter(h=>h.student_number===sn&&h.destination==="Nurse").length,
+      office:hist.filter(h=>h.student_number===sn&&h.destination==="Office").length,
+      denied:attempts.filter(a=>a.student_number===sn).length,
+      overrides:overrides.filter(a=>a.affected_record_id===sn).length };
+  });
+
+  const tripCounts=rows.map(r=>r.trips), allDurs=[].concat(...rows.map(r=>r.durs)), studentAvgs=rows.filter(r=>r.trips>0).map(r=>r.avg);
+  const meanTrips=mean(tripCounts), sdTrips=sd(tripCounts), meanDur=mean(allDurs), sdDur=sd(allDurs);
+  const freqThresh=meanTrips+k*sdTrips, durThresh=meanDur+k*sdDur;
+  rows.forEach(r=>{ r.freqPct=pctAtOrBelow(tripCounts,r.trips); r.durPct=r.trips?pctAtOrBelow(studentAvgs,r.avg):null;
+    r.freqOutlier=sdTrips>0&&r.trips>freqThresh; r.durOutlier=r.trips>0&&sdDur>0&&r.avg>durThresh; r.limited=r.trips<5; });
+
+  return { win, k, scopeLabel:isAdminRole(sess.role)?"the school":"grade "+sess.grade,
+    grade:{ students:rows.length, bathroomTrips:allDurs.length, avgTripsPerStudent:meanTrips, meanTrips, sdTrips,
+      avgDuration:meanDur, medianDuration:median(allDurs), sdDuration:sdDur, limited:allDurs.length<10 }, rows };
+}
+
+
+// Compute pair overlap/coordination stats from pass history.
+// "overlap" = both students out at the same time for >=1 min.
+// "near-simultaneous" = checkout within overlapWindowMin of each other.
+function computeOverlaps(sess, win){
+  const overlapWindowSec = num(getSetting("default_overlap_window_minutes"),3)*60;
+  const start = windowStart(win);
+  const hist = store.passHistory.filter(h=>scopes(sess,h.grade)&&new Date(h.check_out_time).getTime()>=start);
+  const pairs = {};          // "A|B" -> {count, nearCount, lastSeen}
+  const byStudent = {};
+  hist.forEach(h=>{ (byStudent[h.student_number]=byStudent[h.student_number]||[]).push(h); });
+  const sns = Object.keys(byStudent);
+  for(let i=0;i<sns.length;i++){
+    for(let j=i+1;j<sns.length;j++){
+      const a=byStudent[sns[i]], b=byStudent[sns[j]];
+      let overlapCount=0, nearCount=0, lastSeen=0;
+      a.forEach(ta=>{
+        const aOut=new Date(ta.check_out_time).getTime();
+        const aIn =new Date(ta.check_in_time).getTime();
+        b.forEach(tb=>{
+          const bOut=new Date(tb.check_out_time).getTime();
+          const bIn =new Date(tb.check_in_time).getTime();
+          // true overlap: both out at the same time for >60s
+          const overlapStart=Math.max(aOut,bOut), overlapEnd=Math.min(aIn,bIn);
+          if(overlapEnd-overlapStart>=60000){ overlapCount++; lastSeen=Math.max(lastSeen,overlapStart); }
+          // near-simultaneous: checkouts within window even if no true overlap
+          if(Math.abs(aOut-bOut)<=overlapWindowSec*1000){ nearCount++; lastSeen=Math.max(lastSeen,Math.max(aOut,bOut)); }
+        });
+      });
+      if(overlapCount+nearCount>0){
+        const key=[sns[i],sns[j]].sort().join("|");
+        pairs[key]={a:sns[i],b:sns[j],overlapCount,nearCount,total:overlapCount+nearCount,lastSeen};
+      }
+    }
+  }
+  return Object.values(pairs).sort((x,y)=>y.total-x.total);
+}
+
+let insightsWin="week", insightsSort={key:"trips",dir:-1};
+function viewInsights(v){
+  const live=localStorage.getItem(CONFIG.LIVE_URL_KEY);
+  const st=computeStats(session,insightsWin), g=st.grade;
+  const overlaps=computeOverlaps(session,insightsWin);
+  const topPairs=overlaps.slice(0,8);
+  const hasRestriction=(a,b)=>store.pairRestrictions.some(r=>truthy(r.active)&&((r.student_a_number===a&&r.student_b_number===b)||(r.student_a_number===b&&r.student_b_number===a)));
+  const coordPanel=topPairs.length?`
+    <div class="panel" style="margin-top:18px"><div class="panel-head">🔗 Coordination patterns <span class="count">pairs with overlapping or near-simultaneous trips</span></div>
+      <table class="grid"><thead><tr><th>Students</th><th>Overlapping trips</th><th>Near-simultaneous starts</th><th>Restriction?</th><th></th></tr></thead><tbody>
+      ${topPairs.map(p=>{
+        const hasr=hasRestriction(p.a,p.b);
+        const signal=p.overlapCount>=3?"var(--signal)":p.overlapCount>=2?"var(--wait)":"var(--ink-faint)";
+        return `<tr><td class="mono"><b>${esc(p.a)}</b> &amp; <b>${esc(p.b)}</b></td>
+          <td class="mono" style="color:${signal};font-weight:700">${p.overlapCount}</td>
+          <td class="mono">${p.nearCount}</td>
+          <td>${hasr?'<span class="tag" style="background:var(--signal-wash);color:var(--signal-ink)">active restriction</span>':'<span style="color:var(--ink-faint)">none</span>'}</td>
+          <td style="text-align:right">${hasr?"":`<button class="btn ghost sm" data-pair-a="${esc(p.a)}" data-pair-b="${esc(p.b)}">Add restriction</button>`}</td></tr>`;
+      }).join("")}
+      </tbody></table>
+      <p style="font-size:.8rem;color:var(--ink-faint);padding:10px 16px 6px">Overlap = both students were out at the same time for at least 1 minute. Near-simultaneous = checkouts within the configured window (${getSetting("default_overlap_window_minutes")||3} min). Frequency alone is not evidence of intent.</p></div>`:
+    `<div class="panel" style="margin-top:18px"><div class="panel-body"><span style="color:var(--ink-faint)">No overlapping or near-simultaneous trip pairs found in this window.</span></div></div>`;
+  const rows=[...st.rows].sort((a,b)=>{ let x=a[insightsSort.key],y=b[insightsSort.key]; if(x==null)x=-1; if(y==null)y=-1;
+    return (x>y?1:x<y?-1:0)*insightsSort.dir; });
+  v.innerHTML=`
+    <div class="view-head"><h1>Insights</h1><span class="sub">Movement patterns · ${esc(st.scopeLabel)} · ${insightsWin==="week"?"this week":"all time"}</span>
+      <span class="spacer"></span>
+      <button class="btn ghost sm" data-win="week" ${insightsWin==="week"?'style="background:var(--console-wash);color:var(--console-ink)"':''}>This week</button>
+      <button class="btn ghost sm" data-win="all" ${insightsWin==="all"?'style="background:var(--console-wash);color:var(--console-ink)"':''}>All time</button></div>
+    ${live?`<div class="panel" style="margin-bottom:14px"><div class="panel-body" style="font-size:.85rem;color:var(--ink-soft)">Live mode is set, but Insights run on local demo data — server-side analytics are Phase 2.</div></div>`:""}
+    ${g.limited?`<div class="panel" style="margin-bottom:14px;border-color:var(--wait)"><div class="panel-body" style="font-size:.88rem;color:var(--wait-ink)">Not enough data yet — fewer than 10 bathroom/water trips in scope. Comparisons and percentiles are preliminary until more trips are recorded.</div></div>`:""}
+    <div class="cards" style="margin-bottom:16px">
+      ${statCard("Students",g.students)}${statCard("Avg trips / student",g.avgTripsPerStudent.toFixed(1))}
+      ${statCard("Avg trip length",fmtDur(Math.round(g.avgDuration)))}${statCard("Median length",fmtDur(Math.round(g.medianDuration)))}</div>
+    <div class="panel"><div class="panel-head">Per student <span class="count">tap a row for detail</span></div>
+      <table class="grid"><thead><tr>
+        ${insHead("sn","Number")}${insHead("trips","Trips")}${insHead("avg","Avg")}${insHead("median","Median")}${insHead("longest","Longest")}
+        ${insHead("total","Total out")}${insHead("nurse","Nurse")}${insHead("office","Office")}${insHead("denied","Delayed")}
+        ${insHead("freqPct","Freq %ile")}${insHead("durPct","Dur %ile")}<th>Flags</th></tr></thead><tbody>
+        ${rows.map(r=>`<tr data-sn="${esc(r.sn)}" style="cursor:pointer">
+          <td class="mono"><b>${esc(r.sn)}</b></td><td class="mono">${r.trips}</td><td class="mono">${r.trips?fmtDur(r.avg):"—"}</td>
+          <td class="mono">${r.trips?fmtDur(r.median):"—"}</td><td class="mono">${r.trips?fmtDur(r.longest):"—"}</td><td class="mono">${r.trips?fmtDur(r.total):"—"}</td>
+          <td class="mono">${r.nurse||"—"}</td><td class="mono">${r.office||"—"}</td><td class="mono">${r.denied||"—"}</td>
+          <td class="mono">${r.trips?r.freqPct+"%":"—"}</td><td class="mono">${r.durPct!=null?r.durPct+"%":"—"}</td>
+          <td>${flagTags(r)}</td></tr>`).join("")}</tbody></table></div>
+    <p style="font-size:.82rem;color:var(--ink-faint);margin-top:12px;max-width:72ch">Movement data may not be normally distributed. An outlier means a student is <b>outside the normal observed range</b> for this group — context to review, not proof of intent.</p>
+    ${coordPanel}`;
+  v.querySelectorAll("[data-win]").forEach(b=>b.onclick=()=>{ insightsWin=b.dataset.win; viewInsights(v); });
+  v.querySelectorAll("th[data-sort]").forEach(th=>th.onclick=()=>{ const k=th.dataset.sort;
+    if(insightsSort.key===k) insightsSort.dir*=-1; else insightsSort={key:k,dir:k==="sn"?1:-1}; viewInsights(v); });
+  v.querySelectorAll("tbody tr").forEach(tr=>tr.onclick=()=>openStudentDetail(tr.dataset.sn, computeStats(session,insightsWin)));
+  v.querySelectorAll("[data-pair-a]").forEach(b=>b.onclick=e=>{ e.stopPropagation();
+    openNewPairPrefilled(b.dataset.pairA, b.dataset.pairB); });
+}
+function statCard(label,val){ return `<div class="panel"><div class="panel-body"><div style="font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)">${esc(label)}</div><div class="mono" style="font-size:1.7rem;font-weight:700;margin-top:2px">${esc(val)}</div></div></div>`; }
+function insHead(key,label){ const on=insightsSort.key===key; return `<th data-sort="${key}" style="cursor:pointer;white-space:nowrap">${esc(label)}${on?(insightsSort.dir<0?" ▾":" ▴"):""}</th>`; }
+function flagTags(r){ let t="";
+  if(r.freqOutlier) t+=`<span class="tag" style="background:var(--signal-wash);color:var(--signal-ink)">frequent</span> `;
+  if(r.durOutlier) t+=`<span class="tag" style="background:var(--wait-wash);color:var(--wait-ink)">long trips</span> `;
+  if(r.exempt) t+=`<span class="tag exempt">exempt</span> `;
+  if(r.limited&&r.trips>0) t+=`<span class="tag" style="background:var(--surface-2);color:var(--ink-faint)" title="This student has fewer than 5 trips recorded — percentiles and outlier flags may not be meaningful yet. The label clears automatically as more trips are recorded.">infrequent</span>`;
+  return t||'<span style="color:var(--ink-faint)">—</span>'; }
+
+function openStudentDetail(sn, st){
+  const r=st.rows.find(x=>x.sn===sn); if(!r)return; const g=st.grade;
+  const cmp=r.trips?(r.freqOutlier?"outside the normal observed range":"within the normal range"):"no trips recorded";
+  const bars=r.durs.slice(-12).map(d=>{ const h=Math.max(6,Math.round(d/900*60));
+    const col=d>=540?"var(--signal)":d>=g.avgDuration?"var(--wait)":"var(--go)";
+    return `<span title="${fmtDur(d)}" style="display:inline-block;width:11px;height:${h}px;background:${col};border-radius:2px"></span>`; }).join("");
+  showModal({ title:"Student "+sn, desc:"Grade "+r.grade+" · Room "+r.room+(r.exempt?" · alert-exempt":""),
+    bodyHtml:`
+      <div class="cards" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        ${statCard("Trips ("+(st.win==="week"?"wk":"all")+")",r.trips)}${statCard("Avg length",r.trips?fmtDur(r.avg):"—")}
+        ${statCard("Longest",r.trips?fmtDur(r.longest):"—")}${statCard("Total out",r.trips?fmtDur(r.total):"—")}</div>
+      <div class="field"><label>Recent trip lengths</label>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:66px;padding:8px;background:var(--surface-2);border-radius:10px">${bars||'<span style="color:var(--ink-faint)">No trips in window</span>'}</div></div>
+      <p style="font-size:.93rem">${pctSentence(r, st)}</p>
+      ${(r.nurse||r.office)?`<p style="font-size:.88rem;color:var(--ink-soft)">Also ${r.nurse} nurse and ${r.office} office visits this window (tracked separately).</p>`:""}
+      ${r.exempt?`<p style="font-size:.85rem;color:var(--console-ink)">Alert-exempt: frequency/duration alerts are suppressed for this student even when outside the range.</p>`:""}      ${r.customCd?`<p style="font-size:.85rem;color:var(--wait-ink)">Custom cooldown: <b>${r.customCd} minutes</b> between bathroom/water trips (class default: ${getSetting("default_cooldown_minutes")||"none"} min).</p>`:`<p style="font-size:.85rem;color:var(--ink-faint)">Cooldown: class default (${getSetting("default_cooldown_minutes")||"none"} min).</p>`}`,  
+    footHtml:`<button class="btn ghost" data-close>Close</button><button class="btn ghost" id="toggleExempt">${r.exempt?"Remove exemption":"Mark alert-exempt"}</button><button class="btn" id="parent">Parent-meeting summary</button>`,
+    onMount:(m)=>{
+      m.querySelector("#parent").onclick=()=>{ closeModal(); askAssistant("Summarize student "+sn+" for a parent meeting"); };
+      m.querySelector("#toggleExempt").onclick=async()=>{
+        const res=await api("toggle_alert_exempt",{student_number:sn});
+        if(res.ok){ toast(res.data.now_exempt?"Alert exemption added":"Alert exemption removed"); closeModal(); if(route==="students") renderView(); }
+        else toast(res.message);
+      };
+    }});
+}
+
+// Plain-English percentile sentence — explicit about what high/low means.
+function pctSentence(r, st){
+  if(!r.trips) return "No bathroom/water trips recorded in this window.";
+  const freqDir = r.freqPct >= 50
+    ? "goes <b>more often</b> than "+r.freqPct+"% of "+esc(st.scopeLabel)+" — toward the <b>higher end</b>"
+    : "goes <b>less often</b> than "+(100-r.freqPct)+"% of "+esc(st.scopeLabel)+" — toward the <b>lower end</b>";
+  let durPart = "";
+  if(r.durPct != null){
+    const durDir = r.durPct >= 50
+      ? "trips that run <b>longer</b> than "+r.durPct+"% of the group"
+      : "trips that are <b>shorter</b> than "+(100-r.durPct)+"% of the group";
+    durPart = " Their average trip length: "+durDir+".";
+  }
+  const flag = (r.freqOutlier||r.durOutlier)
+    ? " <b style=\"color:var(--wait-ink)\">Outside the normal observed range</b> — worth a look, not proof of anything."
+    : " Within the normal range for this group.";
+  return "Student "+esc(r.sn)+" "+freqDir+" for how often they leave."+durPart+flag;
+}
+
+/* ---- Assistant (local) ---- */
+let assistantLog=[];
+function viewAssistant(v){
+  const chips=["Who is leaving most often this week?","Who is taking the longest trips?","Show students outside 2 standard deviations","Are any students coordinating?","Who leaves together most often?","Is 30002 out more than others?","Who has the most nurse visits?","Summarize the group"];
+  v.innerHTML=`
+    <div class="view-head"><h1>Assistant</h1><span class="sub">Ask about ${esc(isAdminRole(session.role)?"the school's":"your grade's")} movement data</span></div>
+    <div class="panel" style="margin-bottom:14px"><div class="panel-body" style="font-size:.85rem;color:var(--ink-soft)">
+      🔒 This assistant runs locally and answers from your data — nothing leaves your browser, and it never changes records.
+      In the deployed app, AI is off by default, admin-enabled, runs server-side, and sees only aggregate, non-identifying summaries.</div></div>
+    <div class="panel"><div class="panel-body">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div id="chips" style="display:flex;flex-wrap:wrap;gap:8px;flex:1">${chips.map(c=>`<button class="btn ghost sm" data-q="${esc(c)}">${esc(c)}</button>`).join("")}</div><button class="btn" id="scan" title="Full pattern scan — surfaces coordination, outliers, and anomalies">🔍 Scan all patterns</button></div>
+      <div id="chat" style="display:flex;flex-direction:column;gap:10px;min-height:120px;max-height:46vh;overflow:auto;padding:4px 2px"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <input id="ask" placeholder="Ask a question…" style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px"/>
+        <button class="btn" id="send">Ask</button></div></div></div>`;
+  const chat=$("#chat");
+  chat.innerHTML=assistantLog.map(bubble).join(""); chat.scrollTop=chat.scrollHeight;
+  v.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>askAssistant(b.dataset.q));
+  $("#send").onclick=()=>{ const q=$("#ask").value.trim(); if(q){ $("#ask").value=""; askAssistant(q); } };
+  $("#scan").onclick=()=>askAssistant("__scan__");
+  $("#ask").addEventListener("keydown",e=>{ if(e.key==="Enter"){ const q=e.target.value.trim(); if(q){ e.target.value=""; askAssistant(q); } } });
+}
+function bubble(m){ const me=m.role==="user";
+  return `<div style="align-self:${me?"flex-end":"flex-start"};max-width:84%;background:${me?"var(--console)":"var(--surface-2)"};color:${me?"#fff":"var(--ink)"};padding:10px 13px;border-radius:14px;font-size:.93rem;white-space:pre-wrap;line-height:1.5">${m.html||esc(m.text)}</div>`; }
+function askAssistant(q){
+  assistantLog.push({role:"user",text:q});
+  assistantLog.push({role:"bot",html:assistantAnswer(q)});
+  if(route==="assistant") viewAssistant($("#view")); else { route="assistant"; renderConsole(); }
+}
+/* ============================================================
+   AI SELF-KNOWLEDGE — the assistant knows its own architecture
+   so it can answer safety, privacy, and security questions.
+   ============================================================ */
+const SYSTEM_KNOWLEDGE = `
+You are the Hall Pass AI assistant — a read-only analysis tool embedded in a
+school bathroom-pass tracking system. You help teachers understand movement
+patterns. You NEVER change data, create rules, delete records, or override passes.
+
+ARCHITECTURE & DATA FLOW
+- This demo runs entirely in the browser. No data leaves this device.
+- In the deployed version: a Progressive Web App (PWA) hosted on GitHub Pages
+  talks to a Google Apps Script backend (/exec URL) over HTTPS.
+- All data is stored in a Google Sheet controlled by the school's Google
+  Workspace account. The school owns its own data — the developer does not.
+- The Sheet is never made public. It is only accessible to authorized teacher
+  and admin accounts, and to the Apps Script service identity.
+
+STUDENT DATA & PRIVACY
+- Minimum data only: student NUMBER, grade, classroom, active status, alert-
+  exempt flag. No names, photos, addresses, parent info, or medical details.
+- Students interact with a kiosk using their number only. They see neutral
+  messages and never see alert reasons, pair restrictions, or teacher notes.
+- Removing a student IMMEDIATELY purges all linked records: pass history,
+  alerts, restrictions, notes, AI logs. A non-identifying audit note is kept.
+- Data is retained for the current school year only and purged at year end
+  (admin-controlled, default is "remind admin" not automatic).
+
+SECURITY BOUNDARY (the critical one)
+- The student/teacher boundary is enforced SERVER-SIDE, not by hiding UI.
+- Teacher and admin actions require a real Google Workspace ID token verified
+  on the server (signature, expiry, audience, school domain, email_verified).
+- A student at the kiosk holds no token. Even if they typed the teacher URL,
+  the server refuses every privileged action. No client-side gate is trusted.
+- The student portal sends a device key with every request. If the key is
+  wrong or missing, the server rejects the request with a neutral error.
+- Teacher auth in the demo is simulated (pick from a list). In the deployed
+  app it is real Google Workspace sign-in verified server-side.
+
+AI CONSTRAINTS (spec section 13)
+- AI is OFF by default. Admin must explicitly enable it.
+- In the deployed app, the AI key is stored SERVER-SIDE only — never in the
+  frontend code or sent to the browser.
+- AI sees only aggregated, non-identifying data summaries — not raw student
+  records, not names, not addresses.
+- AI may SUGGEST rules or restrictions but cannot create, modify, or delete
+  them. Every AI suggestion requires explicit teacher/admin confirmation.
+- AI logs every interaction (prompt summary, response summary, teacher response).
+- If a teacher dismisses an AI suggestion, the AI does not repeat it unless
+  the pattern materially worsens.
+
+AUDIT & ACCOUNTABILITY
+- Every sensitive action is written to the AuditLog: logins, student add/remove,
+  purges, overrides, pair restrictions, alert changes, AI suggestions.
+- The audit log is visible to administrators only.
+- Manual returns, overrides, and purges all require a teacher account.
+
+ALERT PHILOSOPHY
+- Alerts are DECISION SUPPORT, not accusations. They never imply medical
+  conditions, intent, or wrongdoing.
+- "Outside the normal observed range" is the correct framing — never
+  "abusing privileges" or "has a medical issue."
+- All statistical analysis uses grade-level baselines with a configurable
+  standard deviation threshold (default 2 SD).
+- Students with approved accommodations can be marked alert-exempt. Their
+  trips are still tracked but do not generate frequency/duration alerts.
+`;
+
+function assistantAnswer(q){
+  const st=computeStats(session,"week"), ql=q.toLowerCase(), numMatch=q.match(/\b(\d{4,6})\b/);
+  const caution="\n\nNote: movement data isn't necessarily normal — read this as \u201coutside the normal observed range,\u201d not proof of intent.";
+  const list=(arr,fn)=>arr.map((r,i)=>(i+1)+". "+fn(r)).join("\n");
+  // ── self-knowledge / architecture questions ──────────────────────────────
+  const selfQ = ql.includes("how does") || ql.includes("where does") || ql.includes("who can see") ||
+    ql.includes("is it secure") || ql.includes("privacy") || ql.includes("data go") ||
+    ql.includes("student data") || ql.includes("safe") || ql.includes("gdpr") || ql.includes("ferpa") ||
+    ql.includes("architecture") || ql.includes("backend") || ql.includes("google sheet") ||
+    ql.includes("your data") || ql.includes("the data") || ql.includes("stored") ||
+    ql.includes("who sees") || ql.includes("what happens when") || ql.includes("can ai") ||
+    ql.includes("can the ai") || ql.includes("ai access") || ql.includes("audit") ||
+    ql.includes("purge") || ql.includes("remove a student") || ql.includes("delete") ||
+    ql.includes("how are you") || ql.includes("what are you") || ql.includes("how do you work") ||
+    ql.includes("security") || ql.includes("token") || ql.includes("login") || ql.includes("sign in");
+  if(selfQ){
+    // Route specific sub-questions to precise answers
+    if(ql.includes("where does") && (ql.includes("data") || ql.includes("go")))
+      return esc(`In this demo, all data stays in your browser (localStorage) — nothing leaves this device.\n\nIn the deployed app, data lives in a Google Sheet owned by the school's Google Workspace account. The developer has no access. The sheet is never public. Only authorized teacher/admin accounts and the Apps Script backend can reach it.`);
+    if(ql.includes("can ai") || ql.includes("can the ai") || ql.includes("ai access") || ql.includes("ai see"))
+      return esc(`The AI (this assistant) is read-only. It can analyze and summarize data, and suggest restrictions — but it cannot create rules, delete records, override passes, or change any data. Every suggestion requires explicit teacher confirmation before anything happens.\n\nIn the deployed app, the AI sees only aggregate summaries — not raw records. The AI key is stored server-side only and is never sent to the browser.`);
+    if(ql.includes("remove") || ql.includes("purge") || ql.includes("delete"))
+      return esc(`Removing a student immediately and permanently purges all of their data: pass history, alerts, restrictions, notes, and AI logs. The only thing kept is a non-identifying audit entry that a purge occurred (no student number is stored).\n\nAt the end of the school year, all movement history is purged (admin-controlled, default is "remind admin" rather than automatic).`);
+    if(ql.includes("security") || ql.includes("token") || ql.includes("boundary") || ql.includes("sign in") || ql.includes("login"))
+      return esc(`The student/teacher security boundary is enforced server-side.\n\nTeacher and admin actions require a Google Workspace ID token that the server verifies: signature, expiry, audience (your OAuth client), school domain, and email_verified. A student at the kiosk has no token, so the server refuses every privileged action regardless of what URL they visit.\n\nThe student kiosk also sends a device key with every request. If the key is wrong or missing, the server returns a neutral error ("ask your teacher") — no information is leaked.\n\nIn this demo, teacher auth is simulated. In the deployed app it is real Google Workspace sign-in.`);
+    if(ql.includes("audit"))
+      return esc(`Every sensitive action is recorded in the Audit Log (admin-only view): teacher logins, student add/remove, data purges, manual returns, pass overrides, pair restriction changes, alert opt-outs, AI suggestions and teacher responses, bulk imports, and settings changes.\n\nThe audit log never stores a student number after a purge — only that a purge occurred.`);
+    if(ql.includes("exempt") || ql.includes("accommodation"))
+      return esc(`A student marked alert-exempt will not trigger frequency or duration alerts, even if their usage is statistically unusual. Their trips are still tracked and visible in Insights — the exemption only suppresses the automated alert.\n\nThis is intended for students with approved accommodations or known circumstances. Teachers can toggle exemption from the Students list or from a student's detail panel in Insights.`);
+    // General architecture fallback
+    const sysChunks = SYSTEM_KNOWLEDGE.trim().split("\n\n").filter(s=>s.trim());
+    const relevant = sysChunks.filter(c=>{ const cl=c.toLowerCase();
+      return cl.includes("data")||cl.includes("security")||cl.includes("student")||cl.includes("ai"); }).slice(0,3);
+    const body = (relevant.length ? relevant : sysChunks.slice(0,3)).join("\n\n");
+    return esc(body+"\n\nAsk me a more specific question — e.g. 'where does student data go?', 'can the AI change records?', 'what happens when a student is removed?'");
+  }
+
+  if(numMatch){
+    const r=st.rows.find(x=>x.sn===numMatch[1]);
+    if(!r) return esc("I don't see student "+numMatch[1]+" in "+st.scopeLabel+".");
+    if(ql.includes("summ")||ql.includes("parent"))
+      return esc(`Summary for student ${r.sn} (${st.scopeLabel}, this week):\n• ${r.trips} bathroom/water trips, average ${fmtDur(r.avg)}, longest ${fmtDur(r.longest)}.\n• Frequency: ${r.freqPct}th percentile. Trip length: ${r.durPct!=null?r.durPct+"th percentile":"n/a"}.\n• Also ${r.nurse} nurse, ${r.office} office visits (tracked separately).\nFraming: ${r.freqOutlier||r.durOutlier?"outside":"within"} the normal observed range for the group.`);
+    const verdict=r.freqOutlier?`more than most — ${r.freqPct}th percentile (grade average ${st.grade.meanTrips.toFixed(1)} trips)`
+      :`${r.freqPct>=50?"a bit above":"around or below"} the middle — ${r.freqPct}th percentile (grade average ${st.grade.meanTrips.toFixed(1)} trips)`;
+    return esc(`Student ${r.sn} made ${r.trips} bathroom/water trips this week, ${verdict}. Average trip ${fmtDur(r.avg)} (grade average ${fmtDur(Math.round(st.grade.avgDuration))}).`)+((r.freqOutlier||r.durOutlier)?esc(caution):"");
+  }
+  if(ql.includes("most often")||ql.includes("frequent")||ql.includes("leaving most")||ql.includes("most trips"))
+    return esc("Most frequent bathroom/water this week ("+st.scopeLabel+"):\n"+list([...st.rows].sort((a,b)=>b.trips-a.trips).slice(0,5),r=>`${r.sn} — ${r.trips} trips (${r.freqPct}th pct)${r.exempt?" [exempt]":""}`));
+  if(ql.includes("longest")||ql.includes("long trip")||ql.includes("duration"))
+    return esc("Longest average trips this week:\n"+list([...st.rows].filter(r=>r.trips).sort((a,b)=>b.avg-a.avg).slice(0,5),r=>`${r.sn} — avg ${fmtDur(r.avg)}, longest ${fmtDur(r.longest)}`));
+  if(ql.includes("standard deviation")||ql.includes("outlier")||ql.includes("outside")||ql.includes("2 sd")||ql.includes("two standard")){
+    const out=st.rows.filter(r=>r.freqOutlier||r.durOutlier);
+    if(!out.length) return esc("No students are outside "+st.k+" standard deviations in "+st.scopeLabel+" this week.");
+    return esc("Outside "+st.k+" SD for "+st.scopeLabel+" this week:\n"+list(out,r=>`${r.sn} — ${[r.freqOutlier?"frequency":"",r.durOutlier?"duration":""].filter(Boolean).join(" & ")}${r.exempt?" [exempt, won't alert]":""}`))+esc(caution);
+  }
+  if(ql.includes("nurse")){
+    const top=[...st.rows].filter(r=>r.nurse).sort((a,b)=>b.nurse-a.nurse).slice(0,5);
+    return top.length? esc("Most nurse visits this week:\n"+list(top,r=>`${r.sn} — ${r.nurse}`)+"\n\nNurse visits are tracked separately and never imply a medical condition.") : esc("No nurse visits recorded in this window.");
+  }
+  if(ql.includes("office")){
+    const top=[...st.rows].filter(r=>r.office).sort((a,b)=>b.office-a.office).slice(0,5);
+    return top.length? esc("Most office visits this week:\n"+list(top,r=>`${r.sn} — ${r.office}`)) : esc("No office visits recorded in this window.");
+  }
+  if(ql.includes("review first")||ql.includes("which alert")||ql.includes("priorit")){
+    const sev={high:0,medium:1,low:2};
+    const al=store.alerts.filter(a=>a.status==="open"&&scopes(session,a.grade)).sort((a,b)=>sev[a.severity]-sev[b.severity]);
+    return al.length? esc("Open alerts by priority:\n"+list(al.slice(0,6),a=>`[${a.severity}] ${a.message}`)) : esc("No open alerts right now.");
+  }
+  // ── coordination queries ──────────────────────────────────────────────────
+  if(ql.includes("coordinat")||ql.includes("together")||ql.includes("same time")||ql.includes("overlap")||ql.includes("leaves together")||ql.includes("going together")||ql.includes("meeting up")||ql.includes("messing around")){
+    const ov=computeOverlaps(session,"week");
+    if(!ov.length) return esc("No overlapping or near-simultaneous trip pairs found this week in "+st.scopeLabel+".\n\nThis means no two students were out at the same time for more than a minute, and no two checkouts happened within "+getSetting("default_overlap_window_minutes")+" minutes of each other.");
+    const top=ov.slice(0,6);
+    const lines=top.map((p,i)=>{
+      const hasr=store.pairRestrictions.some(r=>truthy(r.active)&&((r.student_a_number===p.a&&r.student_b_number===p.b)||(r.student_a_number===p.b&&r.student_b_number===p.a)));
+      return (i+1)+". Students "+p.a+" & "+p.b+" — "+p.overlapCount+" overlapping trip"+(p.overlapCount!==1?"s":"")+", "+p.nearCount+" near-simultaneous checkout"+(p.nearCount!==1?"s":"")+(hasr?" [restriction active]":" [no restriction yet]");
+    }).join("\n");
+    const noRestr=top.filter(p=>!store.pairRestrictions.some(r=>truthy(r.active)&&((r.student_a_number===p.a&&r.student_b_number===p.b)||(r.student_a_number===p.b&&r.student_b_number===p.a))));
+    const suggest=noRestr.length>0?"\n\nIf you want to separate "+noRestr[0].a+" and "+noRestr[0].b+", go to Restrictions → New pair restriction, or use the Insights tab where each pair has an Add restriction button.":"";
+    return esc("Coordination patterns this week ("+st.scopeLabel+"):\n"+lines+suggest+"\n\nReminder: overlapping trips are a signal to review — not proof of intent. Students may simply have similar schedules.");
+  }
+
+  // ── full proactive scan ──────────────────────────────────────────────────
+  if(q==="__scan__"){
+    const findings=[];
+    // frequency & duration outliers
+    const freqOut=st.rows.filter(r=>r.freqOutlier&&!r.exempt);
+    const durOut=st.rows.filter(r=>r.durOutlier&&!r.exempt);
+    if(freqOut.length) findings.push({sev:"medium",text:"Frequency outliers (>"+st.k+" SD above average): "+freqOut.map(r=>r.sn+" ("+r.trips+" trips, "+r.freqPct+"th pct)").join(", ")+"."});
+    if(durOut.length) findings.push({sev:"medium",text:"Duration outliers: "+durOut.map(r=>r.sn+" (avg "+fmtDur(r.avg)+")").join(", ")+"."});
+    // coordination
+    const ov=computeOverlaps(session,"week").filter(p=>p.overlapCount>=2);
+    if(ov.length){
+      const noRestr=ov.filter(p=>!store.pairRestrictions.some(r=>truthy(r.active)&&((r.student_a_number===p.a&&r.student_b_number===p.b)||(r.student_a_number===p.b&&r.student_b_number===p.a))));
+      ov.slice(0,4).forEach(p=>{ const hasr=!noRestr.includes(p);
+        findings.push({sev:p.overlapCount>=3?"high":"medium", text:"Students "+p.a+" & "+p.b+" had "+p.overlapCount+" overlapping trips"+(p.nearCount?" and "+p.nearCount+" near-simultaneous checkouts":"")+"."+(hasr?" (restriction already active)":"")});});
+    }
+    // nurse clusters
+    const nurseTop=st.rows.filter(r=>r.nurse>=2).sort((a,b)=>b.nurse-a.nurse);
+    if(nurseTop.length) findings.push({sev:"low",text:"Nurse visit frequency: "+nurseTop.slice(0,4).map(r=>r.sn+" ("+r.nurse+")").join(", ")+". Review context before any action — this does not imply a medical condition."});
+    // office clusters
+    const offTop=st.rows.filter(r=>r.office>=2).sort((a,b)=>b.office-a.office);
+    if(offTop.length) findings.push({sev:"low",text:"Office visit frequency: "+offTop.slice(0,4).map(r=>r.sn+" ("+r.office+")").join(", ")+"."});
+    // pass attempts / cooldown hits
+    const deniedTop=st.rows.filter(r=>r.denied>=2).sort((a,b)=>b.denied-a.denied);
+    if(deniedTop.length) findings.push({sev:"low",text:"Students with multiple delayed/denied attempts: "+deniedTop.slice(0,4).map(r=>r.sn+" ("+r.denied+"x)").join(", ")+". May indicate frequent tries during cooldown."});
+    if(!findings.length) return esc("No notable patterns found this week in "+st.scopeLabel+". Everything looks within the normal observed range.");
+    const sevOrder={high:0,medium:1,low:2};
+    findings.sort((a,b)=>sevOrder[a.sev]-sevOrder[b.sev]);
+    const sevLabel={high:"🔴 High signal",medium:"🟡 Worth a look",low:"🔵 For context"};
+    const body=findings.map((f,i)=>(i+1)+". ["+sevLabel[f.sev]+"] "+f.text).join("\n\n");
+    return esc("Pattern scan — "+st.scopeLabel+", this week:\n\n"+body+"\n\nAll findings are signals to review, not conclusions. Context matters. The student screen never shows any of this.");
+  }
+
+  const g=st.grade;
+  return esc(`${st.scopeLabel.charAt(0).toUpperCase()+st.scopeLabel.slice(1)}, this week:\n• ${g.students} students, ${g.bathroomTrips} bathroom/water trips total.\n• Average ${g.avgTripsPerStudent.toFixed(1)} trips/student; average trip ${fmtDur(Math.round(g.avgDuration))}, median ${fmtDur(Math.round(g.medianDuration))}.\n• Outliers (>${st.k} SD): ${st.rows.filter(r=>r.freqOutlier||r.durOutlier).map(r=>r.sn).join(", ")||"none"}.\n\nTry: "are any students coordinating?", "who leaves together most often?", "longest trips", "show outliers", or click 🔍 Scan all patterns.`);
+}
+
+/* ==================================================================
+   SHARED UI BITS
+   ================================================================== */
+function demoBar(){
+  const live=localStorage.getItem(CONFIG.LIVE_URL_KEY);
+  const b=el(`<div class="demobar"><span class="dot"></span>
+    <span><b>Demo mode</b> — running on local fake data${live?" (LIVE URL set)":""}. Your changes are saved in this browser only.</span>
+    <span class="spacer"></span>
+    <button id="resetdemo">Reset data</button>${session?'<button id="lockmini">Lock kiosk</button>':""}</div>`);
+  b.querySelector("#resetdemo").onclick=()=>{ resetStore(); toast("Demo data reset"); render(); };
+  const lm=b.querySelector("#lockmini"); if(lm) lm.onclick=signOut;
+  return b;
+}
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),1900); }
+function fmtDur(sec){ sec=Math.max(0,sec|0); const m=Math.floor(sec/60), s=sec%60; return m+":"+String(s).padStart(2,"0"); }
+function timeAgo(iso){ const d=(Date.now()-new Date(iso).getTime())/1000; if(d<60)return Math.floor(d)+"s ago";
+  if(d<3600)return Math.floor(d/60)+"m ago"; if(d<86400)return Math.floor(d/3600)+"h ago"; return Math.floor(d/86400)+"d ago"; }
+
+/* ==================================================================
+   LOOPS — live timers + alert sweep
+   ================================================================== */
+function liveTick(){
+  tickClock();
+  document.querySelectorAll(".timer .t[data-since]").forEach(elT=>{
+    const sec=elapsed(elT.dataset.since); elT.textContent=fmtDur(sec);
+    const pass=elT.closest(".pass"); if(pass){ const mins=sec/60;
+      const longMin=num(getSetting("default_long_duration_minutes"),6), notRet=num(getSetting("not_returned_minutes"),15);
+      const st=mins>=notRet?"over":mins>=longMin?"wait":"go";
+      pass.className="pass s-"+st; pass.style.marginBottom="10px";
+      const light=pass.querySelector(".statuslight"); if(light) light.className="statuslight "+st;
+      const lbl=pass.querySelector(".timer .lbl"); if(lbl) lbl.textContent=st==="over"?"not returned":"elapsed"; }
+  });
+}
+function sweep(){
+  const longMin=num(getSetting("default_long_duration_minutes"),6), notRet=num(getSetting("not_returned_minutes"),15);
+  let changed=false;
+  store.activePasses.forEach(p=>{
+    if(p.status!=="open")return; const mins=elapsed(p.check_out_time)/60; const st=p.alert_state||"none";
+    if(mins>=notRet && st!=="not_returned"){ createAlert(A(p.grade,p.classroom_id,p.student_number,"","student_not_returned","high",
+      "Student "+p.student_number+" has not been marked returned after "+Math.floor(mins)+" minutes.")); p.alert_state="not_returned"; changed=true; }
+    else if(mins>=longMin && st==="none"){ createAlert(A(p.grade,p.classroom_id,p.student_number,"","long_duration","medium",
+      "Student "+p.student_number+" has been out for "+Math.floor(mins)+" minutes (expected ~"+longMin+" for this grade).")); p.alert_state="long_duration"; changed=true; }
+  });
+  if(changed){ save(); if(session) refreshAlertBadges(); }
+}
+function refreshAlertBadges(){
+  const open=store.alerts.filter(a=>a.status==="open"&&scopes(session,a.grade)).length;
+  const nav=$('button[data-route="board"]'); if(nav){ let tag=nav.querySelector(".navtag");
+    if(open){ if(!tag){ tag=el('<span class="navtag"></span>'); nav.appendChild(tag);} tag.textContent=open; } else if(tag) tag.remove(); }
+  if(route==="board"||route==="alerts") renderView();
+}
+
+/* ==================================================================
+   INIT
+   ================================================================== */
+loadStore();
+render();
+setInterval(liveTick, CONFIG.TICK_MS);
+setInterval(sweep, CONFIG.SWEEP_MS);
+sweep();
+</script>
+</body>
+</html>

@@ -1172,35 +1172,85 @@ async function submitKiosk(){
   showResult(msg, result);
   kioskNum=""; const v=$("#numval"); if(v){v.textContent=idPlaceholder(); v.classList.add("placeholder");}
 }
-// Web Audio tone generator (no external files — open source approach using oscillator)
+/* ============================================================
+   Kiosk sound design — Web Audio API, no external files.
+
+   OK    : Two-note ascending marimba-like chime (C5 → E5).
+           Warm, quick, clearly positive. Teachers hear "approved"
+           from across the room without being startled.
+
+   DENIED: Two-note descending thud (A3 → F3, minor third down).
+           Firm, low, obviously "no" — not a scream, not a beep.
+           Used for both denied and delayed passes.
+
+   WARN  : Silence. Unknown number should not draw room attention.
+
+   Design choices:
+   - Single shared AudioContext (creating one per call causes lag
+     and browser warnings after many uses).
+   - Compressor on the master bus prevents clipping.
+   - Each note uses two detuned oscillators (±4 cents) for warmth
+     plus a pitched noise burst at attack for the marimba click.
+   - ADSR: 8ms attack, exponential decay to near-zero, no sustain.
+     Percussive character, not a held sine tone.
+   ============================================================ */
+let _audioCtx=null;
+function getAudioCtx(){
+  if(!_audioCtx||_audioCtx.state==="closed"){
+    _audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if(_audioCtx.state==="suspended") _audioCtx.resume();
+  return _audioCtx;
+}
+
 function playKioskTone(type){
   try{
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
-    const gain = ctx.createGain();
-    gain.connect(ctx.destination);
-    if(type==="ok"){
-      // Two-note ascending chime: warm, pleasant
-      [[523.25,0,0.15],[659.25,0.18,0.25]].forEach(([freq,start,dur])=>{
+    const ctx=getAudioCtx();
+    const now=ctx.currentTime;
+
+    // Master compressor — keeps everything comfortable even at high volume
+    const comp=ctx.createDynamicsCompressor();
+    comp.threshold.value=-12; comp.knee.value=6;
+    comp.ratio.value=3; comp.attack.value=0.003; comp.release.value=0.15;
+    comp.connect(ctx.destination);
+
+    // note(freq, startSec, decaySec, vol) — marimba-style percussive note
+    function note(freq, startSec, decaySec, vol){
+      // Two slightly detuned oscillators for warmth
+      [0, 4].forEach(detune=>{
         const o=ctx.createOscillator(); o.type="sine";
-        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
-        o.frequency.value=freq; g.gain.setValueAtTime(0,ctx.currentTime+start);
-        g.gain.linearRampToValueAtTime(0.28,ctx.currentTime+start+0.02);
-        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+start+dur);
-        o.start(ctx.currentTime+start); o.stop(ctx.currentTime+start+dur+0.05);
+        o.frequency.value=freq; o.detune.value=detune;
+        const g=ctx.createGain();
+        g.gain.setValueAtTime(0, now+startSec);
+        g.gain.linearRampToValueAtTime(vol, now+startSec+0.008);  // 8ms attack
+        g.gain.exponentialRampToValueAtTime(0.0001, now+startSec+decaySec);
+        o.connect(g); g.connect(comp);
+        o.start(now+startSec); o.stop(now+startSec+decaySec+0.05);
       });
-    } else if(type==="denied"){
-      // Low descending two-tone: firm but not obnoxious
-      [[330,0,0.18],[220,0.22,0.28]].forEach(([freq,start,dur])=>{
-        const o=ctx.createOscillator(); o.type="triangle";
-        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
-        o.frequency.value=freq; g.gain.setValueAtTime(0,ctx.currentTime+start);
-        g.gain.linearRampToValueAtTime(0.22,ctx.currentTime+start+0.02);
-        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+start+dur);
-        o.start(ctx.currentTime+start); o.stop(ctx.currentTime+start+dur+0.05);
-      });
+      // Pitched noise click at attack (gives the marimba "knock")
+      const buf=ctx.createBuffer(1,ctx.sampleRate*0.025,ctx.sampleRate);
+      const data=buf.getChannelData(0);
+      for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*(1-i/data.length);
+      const noise=ctx.createBufferSource(); noise.buffer=buf;
+      const bandpass=ctx.createBiquadFilter(); bandpass.type="bandpass";
+      bandpass.frequency.value=freq*1.5; bandpass.Q.value=2;
+      const ng=ctx.createGain(); ng.gain.value=vol*0.18;
+      noise.connect(bandpass); bandpass.connect(ng); ng.connect(comp);
+      noise.start(now+startSec);
     }
-    // "warn" (unknown number) = no sound per spec
-  }catch(e){}
+
+    if(type==="ok"){
+      // C5 (523 Hz) then E5 (659 Hz) — ascending major third, upbeat
+      note(523.25, 0,    0.55, 0.55);
+      note(659.25, 0.19, 0.70, 0.48);
+    } else if(type==="denied"){
+      // A3 (220 Hz) then F3 (175 Hz) — descending minor third, clearly negative
+      // Lower register so it reads as "stop" not "alarm"
+      note(220, 0,    0.38, 0.50);
+      note(174.61, 0.22, 0.46, 0.44);
+    }
+    // warn (unknown number) = silence per spec
+  }catch(e){ console.warn("Audio error:", e); }
 }
 
 function flashKiosk(color){
@@ -1902,9 +1952,13 @@ function openAddStudent(){
       <div class="field"><label>Classroom</label><input id="f_room" value="${esc(session.classroom_id||"")}"/></div></div>
       <div class="field"><label><input type="checkbox" id="f_ex" style="width:auto;margin-right:6px"/>Exempt from frequency/duration alerts</label></div>`,
     footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="save">Add student</button>`,
-    onMount:(m)=>{ m.querySelector("#save").onclick=async()=>{
-      const r=await api("add_student",{student_number:$("#f_sn").value,grade:$("#f_gr").value,classroom_id:$("#f_room").value,alert_exempt:$("#f_ex").checked});
-      if(r.ok){ toast("Student added"); closeModal(); renderView(); } else toast(r.message); }; }});
+    onMount:(m)=>{
+      const snInput=m.querySelector("#f_sn"), warnEl=m.querySelector("#f_sn_warn");
+      snInput.oninput=()=>{ const w=studentIdLengthWarning(snInput.value.trim()); if(warnEl){ warnEl.textContent=w; warnEl.style.display=w?"block":"none"; } };
+      attachAutocomplete(snInput);
+      m.querySelector("#save").onclick=async()=>{
+        const r=await api("add_student",{student_number:snInput.value.trim(),grade:m.querySelector("#f_gr").value,classroom_id:m.querySelector("#f_room").value,alert_exempt:m.querySelector("#f_ex").checked});
+        if(r.ok){ toast("Student added"); closeModal(); renderView(); } else toast(r.message); }; }});
 }
 function openRemoveStudent(sn){
   showModal({ title:"Remove student "+sn,

@@ -270,6 +270,43 @@ table.grid tr:hover td{background:var(--surface-2)}
   box-shadow:var(--shadow-lg);opacity:0;transition:all .25s}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+
+.mtab{padding:8px 14px;font-weight:600;font-size:.9rem;color:var(--ink-faint);border-bottom:2px solid transparent;margin-bottom:-1.5px;border-radius:0}
+.mtab.active{color:var(--console-ink);border-bottom-color:var(--console)}
+.ac-wrap{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1.5px solid var(--line);
+  border-radius:10px;box-shadow:var(--shadow-lg);max-height:220px;overflow-y:auto;margin-top:2px;display:none}
+.ac-list.show{display:block}
+.ac-item{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.active{background:var(--console-wash)}
+.ac-item .acn{font-family:var(--font-mono);font-weight:700}
+.ac-item .acm{font-size:.8rem;color:var(--ink-faint)}
+
+
+/* UI helper chatbot */
+.help-fab{position:fixed;bottom:22px;right:22px;z-index:55;width:54px;height:54px;border-radius:50%;
+  background:var(--console);color:#fff;font-size:1.5rem;box-shadow:var(--shadow-lg);display:grid;place-items:center;
+  transition:transform .15s,background .15s}
+.help-fab:hover{transform:scale(1.06)}
+.help-panel{position:fixed;bottom:88px;right:22px;z-index:55;width:min(380px,calc(100vw - 44px));max-height:min(560px,calc(100vh - 130px));
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);
+  display:none;flex-direction:column;overflow:hidden}
+.help-panel.show{display:flex}
+.help-head{background:var(--console);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.help-head .ht{font-family:var(--font-display);font-weight:800;font-size:1.05rem}
+.help-head .hs{font-size:.78rem;opacity:.85}
+.help-head .hclose{margin-left:auto;cursor:pointer;font-size:1.2rem;opacity:.8}
+.help-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.help-msg{font-size:.9rem;line-height:1.5;white-space:pre-wrap}
+.help-msg.bot{background:var(--surface-2);border-radius:12px 12px 12px 4px;padding:10px 12px;align-self:flex-start;max-width:92%}
+.help-msg.user{background:var(--console);color:#fff;border-radius:12px 12px 4px 12px;padding:9px 12px;align-self:flex-end;max-width:88%}
+.help-chips{padding:8px 16px 4px;display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--line)}
+.help-chip{font-size:.8rem;border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink-soft);background:var(--surface)}
+.help-chip:hover{border-color:var(--console);color:var(--console)}
+.help-input{display:flex;gap:8px;padding:10px 16px 14px;border-top:1px solid var(--line)}
+.help-input input{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:.88rem}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -288,7 +325,7 @@ table.grid tr:hover td{background:var(--surface-2)}
    ================================================================== */
 
 const CONFIG = {
-  STORE_KEY: "hallpass_demo_store_v3",
+  STORE_KEY: "hallpass_demo_store_v5",
   LIVE_URL_KEY: "hallpass_live_url",
   SWEEP_MS: 4000,   // demo: check alerts every 4s (real backend: 60s trigger)
   TICK_MS: 1000
@@ -335,47 +372,47 @@ function buildSeed(){
     student_id:uuid(),student_number:String(number),grade:String(grade),classroom_id:room,
     active:true,alert_exempt:exempt,exemption_scope_json:"",custom_cooldown_minutes:"",created_at:daysAgo(30),removed_at:""
   });
-  [30001,30002,30003,30004,30005,30006,30007,30008,30009,30010].forEach((n)=>mk(n,3,"3A",n===30007));
-  [30101,30102,30103,30104,30105,30106,30107,30108,30109].forEach(n=>mk(n,3,"3B"));
-  [40001,40002,40003,40004,40005,40006,40007,40008,40009,40010].forEach((n)=>mk(n,4,"4A",n===40009));
-  [40101,40102,40103,40104,40105,40106,40107,40108].forEach(n=>mk(n,4,"4B"));
+  [130001,130002,130003,130004,130005,130006,130007,130008,130009,130010].forEach((n)=>mk(n,3,"3A",n===130007));
+  [130101,130102,130103,130104,130105,130106,130107,130108,130109].forEach(n=>mk(n,3,"3B"));
+  [140001,140002,140003,140004,140005,140006,140007,140008,140009,140010].forEach((n)=>mk(n,4,"4A",n===140009));
+  [140101,140102,140103,140104,140105,140106,140107,140108].forEach(n=>mk(n,4,"4B"));
 
   const passHistory = [];
 
   // ── Normal individual history (scattered, realistic) ──
-  // Student 30001 — average user, ~5 trips over past week
-  mkPass(30001,"Bathroom/Water",daysAgo(6,15),210);
-  mkPass(30001,"Bathroom/Water",daysAgo(5,30),195);
-  mkPass(30001,"Bathroom/Water",daysAgo(3,45),220);
-  mkPass(30001,"Bathroom/Water",daysAgo(2,20),180);
-  mkPass(30001,"Bathroom/Water",daysAgo(1,10),240);
-  // 30003 — solo frequent user
-  mkPass(30003,"Bathroom/Water",daysAgo(6,10),310); mkPass(30003,"Bathroom/Water",daysAgo(5,20),285);
-  mkPass(30003,"Bathroom/Water",daysAgo(4,5),320);  mkPass(30003,"Bathroom/Water",daysAgo(3,15),295);
-  mkPass(30003,"Bathroom/Water",daysAgo(2,25),330); mkPass(30003,"Bathroom/Water",daysAgo(1,5),300);
-  mkPass(30003,"Bathroom/Water",daysAgo(0,60),315);
-  // 30006 — occasional
-  mkPass(30006,"Bathroom/Water",daysAgo(5,10),180); mkPass(30006,"Bathroom/Water",daysAgo(2,30),165);
-  // 30008 — baseline
-  mkPass(30008,"Bathroom/Water",daysAgo(6,20),200); mkPass(30008,"Bathroom/Water",daysAgo(4,10),215);
-  mkPass(30008,"Bathroom/Water",daysAgo(2,15),190); mkPass(30008,"Bathroom/Water",daysAgo(1,30),205);
-  // 30009 — light
-  mkPass(30009,"Bathroom/Water",daysAgo(4,40),170); mkPass(30009,"Bathroom/Water",daysAgo(1,50),185);
-  // 30102, 30104 — normal grade 3B
-  mkPass(30102,"Bathroom/Water",daysAgo(5,15),200); mkPass(30102,"Bathroom/Water",daysAgo(2,20),210);
-  mkPass(30104,"Bathroom/Water",daysAgo(4,25),195); mkPass(30104,"Bathroom/Water",daysAgo(1,35),180);
+  // Student 130001 — average user, ~5 trips over past week
+  mkPass(130001,"Bathroom/Water",daysAgo(6,15),210);
+  mkPass(130001,"Bathroom/Water",daysAgo(5,30),195);
+  mkPass(130001,"Bathroom/Water",daysAgo(3,45),220);
+  mkPass(130001,"Bathroom/Water",daysAgo(2,20),180);
+  mkPass(130001,"Bathroom/Water",daysAgo(1,10),240);
+  // 130003 — solo frequent user
+  mkPass(130003,"Bathroom/Water",daysAgo(6,10),310); mkPass(130003,"Bathroom/Water",daysAgo(5,20),285);
+  mkPass(130003,"Bathroom/Water",daysAgo(4,5),320);  mkPass(130003,"Bathroom/Water",daysAgo(3,15),295);
+  mkPass(130003,"Bathroom/Water",daysAgo(2,25),330); mkPass(130003,"Bathroom/Water",daysAgo(1,5),300);
+  mkPass(130003,"Bathroom/Water",daysAgo(0,60),315);
+  // 130006 — occasional
+  mkPass(130006,"Bathroom/Water",daysAgo(5,10),180); mkPass(130006,"Bathroom/Water",daysAgo(2,30),165);
+  // 130008 — baseline
+  mkPass(130008,"Bathroom/Water",daysAgo(6,20),200); mkPass(130008,"Bathroom/Water",daysAgo(4,10),215);
+  mkPass(130008,"Bathroom/Water",daysAgo(2,15),190); mkPass(130008,"Bathroom/Water",daysAgo(1,30),205);
+  // 130009 — light
+  mkPass(130009,"Bathroom/Water",daysAgo(4,40),170); mkPass(130009,"Bathroom/Water",daysAgo(1,50),185);
+  // 130102, 130104 — normal grade 3B
+  mkPass(130102,"Bathroom/Water",daysAgo(5,15),200); mkPass(130102,"Bathroom/Water",daysAgo(2,20),210);
+  mkPass(130104,"Bathroom/Water",daysAgo(4,25),195); mkPass(130104,"Bathroom/Water",daysAgo(1,35),180);
   // grade 4 baseline
-  mkPass(40001,"Bathroom/Water",daysAgo(5,20),190); mkPass(40001,"Bathroom/Water",daysAgo(2,10),175);
-  mkPass(40004,"Bathroom/Water",daysAgo(4,15),205); mkPass(40004,"Bathroom/Water",daysAgo(1,25),195);
-  mkPass(40006,"Bathroom/Water",daysAgo(5,30),185); mkPass(40006,"Bathroom/Water",daysAgo(2,40),200);
-  mkPass(40008,"Bathroom/Water",daysAgo(4,20),210); mkPass(40008,"Bathroom/Water",daysAgo(1,10),195);
-  mkPass(40101,"Bathroom/Water",daysAgo(5,10),185); mkPass(40103,"Bathroom/Water",daysAgo(3,20),195);
+  mkPass(140001,"Bathroom/Water",daysAgo(5,20),190); mkPass(140001,"Bathroom/Water",daysAgo(2,10),175);
+  mkPass(140004,"Bathroom/Water",daysAgo(4,15),205); mkPass(140004,"Bathroom/Water",daysAgo(1,25),195);
+  mkPass(140006,"Bathroom/Water",daysAgo(5,30),185); mkPass(140006,"Bathroom/Water",daysAgo(2,40),200);
+  mkPass(140008,"Bathroom/Water",daysAgo(4,20),210); mkPass(140008,"Bathroom/Water",daysAgo(1,10),195);
+  mkPass(140101,"Bathroom/Water",daysAgo(5,10),185); mkPass(140103,"Bathroom/Water",daysAgo(3,20),195);
   // nurse & office
-  mkPass(30004,"Nurse",daysAgo(5,10),480);  mkPass(30004,"Nurse",daysAgo(3,15),510);  mkPass(30004,"Nurse",daysAgo(1,20),495);
-  mkPass(30002,"Office",daysAgo(4,10),360); mkPass(40002,"Office",daysAgo(3,20),390);
+  mkPass(130004,"Nurse",daysAgo(5,10),480);  mkPass(130004,"Nurse",daysAgo(3,15),510);  mkPass(130004,"Nurse",daysAgo(1,20),495);
+  mkPass(130002,"Office",daysAgo(4,10),360); mkPass(140002,"Office",daysAgo(3,20),390);
 
   // ── COORDINATED PAIRS — the interesting ones ──────────────────────────────
-  // 30002 & 30005: restricted pair, history of overlapping (A out, B follows 90s later)
+  // 130002 & 130005: restricted pair, history of overlapping (A out, B follows 90s later)
   // Both in scope for the restriction, so these represent past incidents before or around when the restriction was set.
   const coord=(snA,snB,dayOffset,extraMinA,durA,startGapSec,durB)=>{
     const outA=daysAgo(dayOffset,extraMinA);
@@ -383,28 +420,46 @@ function buildSeed(){
     mkPass(snA,"Bathroom/Water",outA,durA);
     mkPass(snB,"Bathroom/Water",outB,durB);
   };
-  // 30002 & 30005 — 4 overlapping trips (restriction already active)
-  coord(30002,30005, 6,20, 320, 90, 300);   // B starts 90s after A — fully overlapping
-  coord(30002,30005, 5,10, 290, 110,280);
-  coord(30002,30005, 3,30, 310, 75, 295);
-  coord(30002,30005, 1,15, 330, 95, 310);
-  // Extra solo trips for 30002 (makes them a frequency outlier too)
-  mkPass(30002,"Bathroom/Water",daysAgo(4,20),270); mkPass(30002,"Bathroom/Water",daysAgo(2,10),255);
-  mkPass(30002,"Bathroom/Water",daysAgo(0,90),265);
+  // 130002 & 130005 — 4 overlapping trips (restriction already active)
+  coord(130002,130005, 6,20, 320, 90, 300);   // B starts 90s after A — fully overlapping
+  coord(130002,130005, 5,10, 290, 110,280);
+  coord(130002,130005, 3,30, 310, 75, 295);
+  coord(130002,130005, 1,15, 330, 95, 310);
+  // Extra solo trips for 130002 (makes them a frequency outlier too)
+  mkPass(130002,"Bathroom/Water",daysAgo(4,20),270); mkPass(130002,"Bathroom/Water",daysAgo(2,10),255);
+  mkPass(130002,"Bathroom/Water",daysAgo(0,90),265);
 
-  // 30004 & 30008 — NO restriction yet, 4 overlapping trips (the unguarded pair to flag)
-  coord(30004,30008, 6,25, 280, 120,270);
-  coord(30004,30008, 4,15, 260, 100,255);
-  coord(30004,30008, 2,20, 290, 80, 275);
-  coord(30004,30008, 1,30, 300, 95, 285);
+  // 130004 & 130008 — NO restriction yet, 4 overlapping trips (the unguarded pair to flag)
+  coord(130004,130008, 6,25, 280, 120,270);
+  coord(130004,130008, 4,15, 260, 100,255);
+  coord(130004,130008, 2,20, 290, 80, 275);
+  coord(130004,130008, 1,30, 300, 95, 285);
 
-  // 40003 & 40007 — grade 4 group members, 3 near-simultaneous (within 3 min window)
-  coord(40003,40007, 5,10, 240, 150,230);   // 2.5 min gap — near-simultaneous
-  coord(40003,40007, 3,20, 255, 170,245);
-  coord(40003,40007, 1,15, 235, 160,225);
-  // Extra trips for 40003 making them a frequency outlier
-  mkPass(40003,"Bathroom/Water",daysAgo(6,10),220); mkPass(40003,"Bathroom/Water",daysAgo(2,30),210);
-  mkPass(40003,"Bathroom/Water",daysAgo(0,120),230);
+  // 140003 & 140007 — grade 4 group members, 3 near-simultaneous (within 3 min window)
+  coord(140003,140007, 5,10, 240, 150,230);   // 2.5 min gap — near-simultaneous
+  coord(140003,140007, 3,20, 255, 170,245);
+  coord(140003,140007, 1,15, 235, 160,225);
+  // Extra trips for 140003 making them a frequency outlier
+  mkPass(140003,"Bathroom/Water",daysAgo(6,10),220); mkPass(140003,"Bathroom/Water",daysAgo(2,30),210);
+  mkPass(140003,"Bathroom/Water",daysAgo(0,120),230);
+
+  // Extended history — 30 days of realistic data for key students
+  const extraStudents=[130006,130007,130008,130009,130010,130101,130102,130103,130104,130105,
+    140001,140002,140004,140005,140006,140008,140101,140102,140103,140104];
+  extraStudents.forEach(sn=>{
+    const trips=Math.floor(Math.random()*8)+2;
+    for(let t=0;t<trips;t++){
+      const dayOff=Math.floor(Math.random()*28)+1;
+      const minOff=Math.floor(Math.random()*200)+20;
+      const dur=Math.floor(Math.random()*240)+120;
+      mkPass(sn,"Bathroom/Water",daysAgo(dayOff,minOff),dur);
+    }
+  });
+  // A few nurse/office trips for variety
+  mkPass(130009,"Nurse",daysAgo(8,30),540); mkPass(130009,"Nurse",daysAgo(15,45),510);
+  mkPass(140005,"Office",daysAgo(6,20),360); mkPass(140005,"Office",daysAgo(20,15),390);
+  mkPass(130101,"Nurse",daysAgo(3,40),480);
+  mkPass(140008,"Office",daysAgo(11,25),420);
 
   const passAttempts = [];
   const seedAudit = [];
@@ -413,37 +468,51 @@ function buildSeed(){
   const openPass=(sn,dest,minsAgo_)=>{const s=students.find(x=>x.student_number===String(sn));
     activePasses.push({pass_id:uuid(),student_number:String(sn),grade:s.grade,classroom_id:s.classroom_id,
       teacher_id:"",destination:dest,check_out_time:minsAgo(minsAgo_),status:"open",alert_state:"none",created_at:minsAgo(minsAgo_)});};
-  openPass(30003,"Bathroom/Water",3);
-  openPass(40002,"Office",12);
+  openPass(130003,"Bathroom/Water",3);
+  openPass(140002,"Office",12);
 
   const pairRestrictions = [{
-    restriction_id:uuid(),student_a_number:"30002",student_b_number:"30005",grade:"3",
+    restriction_id:uuid(),student_a_number:"130002",student_b_number:"130005",grade:"3",
     destination_scope:"Bathroom/Water",action_type:"delay",reason_category:"Socializing concern",
-    private_note:"Tend to meet in the hall.",active:true,created_by:"rivera@demo.school",
+    private_note:"Tend to meet in the hall.",comment:"Observed leaving within 2 minutes of each other on 4 separate occasions this week. Flagged after third incident.",active:true,created_by:"rivera@demo.school",created_by_name:"Ms. Rivera",
     created_at:daysAgo(3),expires_at:""
   }];
   const groupRestrictions = [{
-    group_id:uuid(),group_name:"Table 4",student_numbers_json:JSON.stringify(["40003","40005","40007"]),
-    grade:"4",destination_scope:"Bathroom/Water",action_type:"delay",created_by:"chen@demo.school",
+    group_id:uuid(),group_name:"Table 4",student_numbers_json:JSON.stringify(["140003","140005","140007"]),
+    grade:"4",destination_scope:"Bathroom/Water",action_type:"delay",
+    reason_category:"Coordination pattern",
+    comment:"These three students frequently check out within minutes of each other. Observed 6 times over two weeks.",
+    created_by:"chen@demo.school",created_by_name:"Ms. Chen",
     active:true,created_at:daysAgo(2)
   }];
 
   const settings = {};
   Object.entries({
-    school_name:"Demo Elementary",school_domain:"demo.school",oauth_client_id:"",
+    school_name:"Centennial Elementary",school_domain:"demo.school",oauth_client_id:"",
     school_year_start:"2025-08-18",school_year_end:"2026-06-04",
     default_grade_alert_scope:"grade",ai_enabled:"false",
     default_long_duration_minutes:"6",default_cooldown_minutes:"10",
     default_overlap_window_minutes:"3",default_outlier_standard_deviation:"2",
     not_returned_minutes:"15",max_concurrent_grade:"",max_concurrent_classroom:"2",
-    purge_mode:"remind_admin",device_key:"demo-room-112"
+    purge_mode:"remind_admin",device_key:"demo-room-112",
+    school_logo:"data:image/png;base64,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",
+    student_id_length:"6"
   }).forEach(([k,v])=>settings[k]=v);
 
   return { settings,teachers,classrooms,students,activePasses,passHistory,
     passAttempts,pairRestrictions,groupRestrictions,alerts:[],teacherMessages:[
       {message_id:uuid(),sender_email:"chen@demo.school",recipient_scope:"all",recipient_email:"",
        grade:"4",message_text:"Nurse is out until 10:30 — please hold non-urgent nurse passes.",created_at:minsAgo(22),read_by_json:"[]"}
-    ],teacherNotes:[],auditLog:seedAudit};
+    ],restrictionNotes:[],teacherNotes:[
+      {note_id:uuid(),student_number:"130002",grade:"3",author_email:"rivera@demo.school",author_name:"Ms. Rivera",
+       note_text:"Parent was contacted on 5/12 regarding frequent hall departures. Parent said student sometimes has anxiety and asks to leave to decompress. Agreed to allow but will monitor.",created_at:daysAgo(18),updated_at:daysAgo(18)},
+      {note_id:uuid(),student_number:"130002",grade:"3",author_email:"okafor@demo.school",author_name:"Mr. Okafor",
+       note_text:"Student seems to use bathroom trips as an escape when group work starts. Noticed a pattern — typically leaves within 5 min of group activities beginning.",created_at:daysAgo(10),updated_at:daysAgo(10)},
+      {note_id:uuid(),student_number:"130004",grade:"3",author_email:"rivera@demo.school",author_name:"Ms. Rivera",
+       note_text:"Three nurse visits this week. Confirmed with nurse — not medical. Student says stomach hurts but no fever. Monitoring.",created_at:daysAgo(5),updated_at:daysAgo(5)},
+      {note_id:uuid(),student_number:"140003",grade:"4",author_email:"chen@demo.school",author_name:"Ms. Chen",
+       note_text:"Spoke with student 6/2. They are aware of the group restriction with Table 4. No pushback — cooperative.",created_at:daysAgo(12),updated_at:daysAgo(12)},
+    ],auditLog:seedAudit};
 }
 
 /* ==================================================================
@@ -457,7 +526,25 @@ function loadStore(){
 function saveStore(){ try{ localStorage.setItem(CONFIG.STORE_KEY, JSON.stringify(store)); }catch(e){} }
 function resetStore(){ store = buildSeed(); saveStore(); }
 
+if(store && !store.restrictionNotes) store.restrictionNotes=[];
+if(store && store.teacherMessages) store.teacherMessages.forEach(m=>{ if(!m.dismissed_by_json) m.dismissed_by_json="[]"; });
 const getSetting = (k)=> store.settings[k] ?? "";
+const getLogoDataUrl = ()=> getSetting("school_logo") || "";
+// Returns warning string if sn length doesn't match configured or observed length, else ""
+function studentIdLengthWarning(sn){
+  const configured = parseInt(getSetting("student_id_length")||"0");
+  if(configured > 0 && sn.length !== configured)
+    return "This ID is "+sn.length+" digits but your school uses "+configured+"-digit IDs. Double-check for typos.";
+  // Also check against observed majority length in the database
+  const active = store.students.filter(s=>truthy(s.active));
+  if(!active.length) return "";
+  const lengths = {};
+  active.forEach(s=>{ const l=String(s.student_number).length; lengths[l]=(lengths[l]||0)+1; });
+  const majority = Object.entries(lengths).sort((a,b)=>b[1]-a[1])[0][0];
+  if(String(sn).length !== parseInt(majority))
+    return "This ID is "+sn.length+" digits but most students have "+majority+"-digit IDs. Double-check for typos.";
+  return "";
+}
 const setSetting = (k,v)=>{ store.settings[k]=String(v); };
 
 /* ==================================================================
@@ -478,7 +565,7 @@ const Mock = {
     const student = store.students.find(s=> s.student_number===sn);
     if(!student || !truthy(student.active)){
       logAttempt(sn,"",p.destination,"denied","unknown_or_inactive","",false);
-      return ok(sMsg("We could not check you out. Please ask your teacher.", {result:"denied"}));
+      return ok(sMsg("That student number wasn't recognized. Try again, or ask your teacher if you continue having trouble.", {result:"denied"}));
     }
     const dest = normDest(p.destination);
     const active = store.activePasses.find(a=> a.student_number===sn && a.status==="open");
@@ -534,7 +621,7 @@ const Mock = {
     const sn=String(p.student_number||"").trim(); if(!sn) throw E("Student number is required.");
     const grade = p.grade ?? sess.grade, room = p.classroom_id ?? sess.classroom_id;
     if(!scopes(sess,grade)) throw E("Out of your grade scope.");
-    if(store.students.find(s=>s.student_number===sn&&truthy(s.active))) throw E("A student with that number already exists.");
+    if(store.students.find(s=>s.student_number===sn&&truthy(s.active))) throw E("Student number "+sn+" already exists in this school. Each student must have a unique ID. Check for a typo or use the existing record.");
     store.students.push({student_id:uuid(), student_number:sn, grade:String(grade), classroom_id:room,
       active:true, alert_exempt:truthy(p.alert_exempt), exemption_scope_json:"", custom_cooldown_minutes:"", created_at:nowIso(), removed_at:""});
     audit(sess,"student_added","Student",sn,"Added student "+sn);
@@ -581,9 +668,11 @@ const Mock = {
     if(!a||!b) throw E("Both student numbers are required.");
     if(a===b) throw E("A pair restriction needs two different students.");
     const grade=p.grade??sess.grade; if(!scopes(sess,grade)) throw E("Out of your grade scope.");
+    const teacherName=store.teachers.find(t=>t.email===sess.email);
     store.pairRestrictions.push({restriction_id:uuid(), student_a_number:a, student_b_number:b, grade:String(grade),
       destination_scope:p.destination_scope||"Bathroom/Water", action_type:p.action_type||"delay",
-      reason_category:p.reason_category||"Other", private_note:p.private_note||"", active:true,
+      reason_category:p.reason_category||"Other", private_note:p.private_note||"",
+      comment:p.comment||"", created_by_name:teacherName?teacherName.display_name:sess.email, active:true,
       created_by:sess.email, created_at:nowIso(), expires_at:p.expires_at||""});
     audit(sess,"pair_restriction_created","PairRestriction","",("Pair restriction for "+a+" & "+b));
     save(); return ok({ok:true});
@@ -611,16 +700,109 @@ const Mock = {
       (s.alert_exempt?"Alert exemption added":"Alert exemption removed")+" for student "+sn+".");
     save(); return ok({ok:true, now_exempt:s.alert_exempt});
   },
+  create_group_restriction(p,sess){ requireTeacher(sess);
+    const members=(p.student_numbers||[]).map(String);
+    if(members.length<2) throw E("A group needs at least two students.");
+    const grade=p.grade??sess.grade;
+    if(!scopes(sess,grade)) throw E("Out of your grade scope.");
+    const teacherName=store.teachers.find(t=>t.email===sess.email);
+    store.groupRestrictions.push({group_id:uuid(), group_name:p.group_name||"Group",
+      student_numbers_json:JSON.stringify(members), grade:String(grade),
+      destination_scope:p.destination_scope||"Bathroom/Water", action_type:p.action_type||"delay",
+      reason_category:p.reason_category||"Other", comment:p.comment||"", created_by:sess.email, created_by_name:teacherName?teacherName.display_name:sess.email,
+      active:true, created_at:nowIso()});
+    audit(sess,"group_restriction_created","GroupRestriction","",'Group "'+(p.group_name||"Group")+'" created with '+members.length+' students.');
+    save(); return ok({ok:true});
+  },
+  remove_restriction(p,sess){ requireTeacher(sess);
+    const id=String(p.restriction_id||"");
+    const pr=store.pairRestrictions.find(r=>r.restriction_id===id);
+    const gr=store.groupRestrictions.find(r=>r.group_id===id);
+    const rec=pr||gr;
+    if(!rec) throw E("Restriction not found.");
+    if(pr&&!scopes(sess,pr.grade)) throw E("Out of your grade scope.");
+    if(gr&&!scopes(sess,gr.grade)) throw E("Out of your grade scope.");
+    // Mark inactive rather than delete (preserves history)
+    rec.active=false; rec.removed_by=sess.email; rec.removed_by_name=store.teachers.find(t=>t.email===sess.email)?.display_name||sess.email;
+    rec.removed_note=p.note||""; rec.removed_at=nowIso();
+    // "Notify" creator — in demo we create a teacher message to them
+    const creator=rec.created_by;
+    if(creator&&creator!==sess.email){
+      const name=store.teachers.find(t=>t.email===sess.email)?.display_name||sess.email;
+      store.teacherMessages.push({message_id:uuid(),sender_email:sess.email,recipient_scope:"teacher",
+        recipient_email:creator,grade:rec.grade||"",
+        message_text:`${name} removed a restriction between ${pr?pr.student_a_number+" & "+pr.student_b_number:rec.group_name}.`+(p.note?` Note: "${p.note}"`:""),
+        created_at:nowIso(),read_by_json:"[]"});
+    }
+    if(creator&&creator!==sess.email){
+      const nm=store.teachers.find(t=>t.email===sess.email)?.display_name||sess.email;
+      notifyTeacher(creator, rec.grade, "restriction_changed", "medium",
+        nm+" removed a restriction you created"+(pr?(" ("+pr.student_a_number+" & "+pr.student_b_number+")"):(' ("'+rec.group_name+'")'))+"."+(p.note?" Note: "+p.note:""));
+    }
+    audit(sess,"restriction_removed",pr?"PairRestriction":"GroupRestriction",id,"Restriction removed."+(p.note?" Note: "+p.note:""));
+    save(); return ok({ok:true});
+  },
+  edit_pair_restriction(p,sess){ requireTeacher(sess);
+    const pr=store.pairRestrictions.find(r=>r.restriction_id===p.restriction_id);
+    if(!pr) throw E("Pair restriction not found.");
+    if(!scopes(sess,pr.grade)) throw E("Out of your grade scope.");
+    if(p.action_type) pr.action_type=p.action_type;
+    if(p.reason_category) pr.reason_category=p.reason_category;
+    if(p.comment!=null) pr.comment=p.comment;
+    if(p.private_note!=null) pr.private_note=p.private_note;
+    pr.last_edited_by=sess.email; pr.last_edited_at=nowIso();
+    if(pr.created_by&&pr.created_by!==sess.email){
+      const nm=store.teachers.find(t=>t.email===sess.email)?.display_name||sess.email;
+      notifyTeacher(pr.created_by, pr.grade, "restriction_changed", "low",
+        nm+" modified a pair restriction you created ("+pr.student_a_number+" & "+pr.student_b_number+").");
+    }
+    audit(sess,"pair_restriction_edited","PairRestriction",p.restriction_id,"Pair restriction edited.");
+    save(); return ok({ok:true});
+  },
+  edit_group_restriction(p,sess){ requireTeacher(sess);
+    const gr=store.groupRestrictions.find(r=>r.group_id===p.group_id);
+    if(!gr) throw E("Group restriction not found.");
+    if(!scopes(sess,gr.grade)) throw E("Out of your grade scope.");
+    if(p.student_numbers) gr.student_numbers_json=JSON.stringify(p.student_numbers.map(String));
+    if(p.group_name) gr.group_name=p.group_name;
+    if(p.action_type) gr.action_type=p.action_type;
+    gr.last_edited_by=sess.email; gr.last_edited_at=nowIso();
+    if(gr.created_by&&gr.created_by!==sess.email){
+      const nm=store.teachers.find(t=>t.email===sess.email)?.display_name||sess.email;
+      notifyTeacher(gr.created_by, gr.grade, "restriction_changed", "low",
+        nm+' modified the group restriction "'+gr.group_name+'" you created.');
+    }
+    audit(sess,"group_restriction_edited","GroupRestriction",p.group_id,"Group restriction edited.");
+    save(); return ok({ok:true});
+  },
   list_restrictions(p,sess){ requireTeacher(sess);
     return ok({
-      pairs: store.pairRestrictions.filter(r=>scopes(sess,r.grade)),
-      groups: store.groupRestrictions.filter(r=>scopes(sess,r.grade))
+      pairs: store.pairRestrictions.filter(r=>truthy(r.active)&&scopes(sess,r.grade)),
+      groups: store.groupRestrictions.filter(r=>truthy(r.active)&&scopes(sess,r.grade))
     });
   },
   list_alerts(p,sess){ requireTeacher(sess);
     const status=p.status||"open";
-    const rows=store.alerts.filter(a=>a.status===status&&scopes(sess,a.grade)).sort((x,y)=>y.created_at.localeCompare(x.created_at));
-    return ok({alerts:rows});
+    const teacher=store.teachers.find(t=>t.email===sess.email)||sess;
+    const showAll=p.ignore_prefs===true;
+    const gradeFilter=p.grade_filter; // admin can narrow to one grade
+    const visibleTo=(a)=>(!a.target_email || a.target_email===sess.email);
+    const inGradeFilter=(a)=>(!gradeFilter || String(a.grade)===String(gradeFilter));
+    const rows=store.alerts.filter(a=>a.status===status&&scopes(sess,a.grade)&&visibleTo(a)&&inGradeFilter(a)&&(showAll||alertPassesPrefs(a,teacher)))
+      .sort((x,y)=>y.created_at.localeCompare(x.created_at));
+    const hidden=store.alerts.filter(a=>a.status===status&&scopes(sess,a.grade)&&visibleTo(a)&&inGradeFilter(a)&&!alertPassesPrefs(a,teacher)).length;
+    return ok({alerts:rows, hidden_by_prefs:hidden});
+  },
+  get_alert_prefs(p,sess){ requireTeacher(sess);
+    const teacher=store.teachers.find(t=>t.email===sess.email)||sess;
+    return ok({prefs:getAlertPrefs(teacher)});
+  },
+  save_alert_prefs(p,sess){ requireTeacher(sess);
+    const teacher=store.teachers.find(t=>t.email===sess.email);
+    if(!teacher) throw E("Teacher not found.");
+    teacher.alert_preferences_json=JSON.stringify(p.prefs||{});
+    audit(sess,"alert_prefs_saved","Teacher",teacher.teacher_id,"Alert preferences updated.");
+    save(); return ok({ok:true});
   },
   acknowledge_alert(p,sess){ requireTeacher(sess);
     const a=store.alerts.find(x=>x.alert_id===p.alert_id&&scopes(sess,x.grade));
@@ -638,13 +820,96 @@ const Mock = {
   },
   list_messages(p,sess){ requireTeacher(sess);
     const isAdmin=isAdminRole(sess.role);
-    const rows=store.teacherMessages.filter(m=>{
+    const includeDismissed=p.include_dismissed===true;
+    const visible=store.teacherMessages.filter(m=>{
       const sc=m.recipient_scope||"";
-      if(sc==="all")return true; if(sc==="admin")return isAdmin;
-      if(sc==="teacher")return String(m.recipient_email).toLowerCase()===String(sess.email).toLowerCase();
-      return String(m.grade)===String(sess.grade)||isAdmin;
-    }).sort((x,y)=>y.created_at.localeCompare(x.created_at));
-    return ok({messages:rows.slice(0,100)});
+      if(sc==="all"){} else if(sc==="admin"){ if(!isAdmin) return false; }
+      else if(sc==="teacher"){ if(String(m.recipient_email).toLowerCase()!==String(sess.email).toLowerCase()) return false; }
+      else { if(!(String(m.grade)===String(sess.grade)||isAdmin)) return false; }
+      return true;
+    });
+    let dismissedCount=0;
+    const rows=visible.filter(m=>{
+      const dz=safeParse(m.dismissed_by_json||"[]",[]);
+      const isDismissed=dz.includes(sess.email);
+      if(isDismissed) dismissedCount++;
+      return includeDismissed || !isDismissed;
+    }).map(m=>({...m, dismissed: safeParse(m.dismissed_by_json||"[]",[]).includes(sess.email)}))
+      .sort((x,y)=>y.created_at.localeCompare(x.created_at));
+    return ok({messages:rows.slice(0,100), dismissed_count:dismissedCount});
+  },
+  dismiss_message(p,sess){ requireTeacher(sess);
+    const m=store.teacherMessages.find(x=>x.message_id===p.message_id);
+    if(!m) throw E("Message not found.");
+    const dz=safeParse(m.dismissed_by_json||"[]",[]);
+    if(!dz.includes(sess.email)){ dz.push(sess.email); m.dismissed_by_json=JSON.stringify(dz); save(); }
+    return ok({ok:true});
+  },
+  undismiss_message(p,sess){ requireTeacher(sess);
+    const m=store.teacherMessages.find(x=>x.message_id===p.message_id);
+    if(!m) throw E("Message not found.");
+    const dz=safeParse(m.dismissed_by_json||"[]",[]).filter(e=>e!==sess.email);
+    m.dismissed_by_json=JSON.stringify(dz); save();
+    return ok({ok:true});
+  },
+  add_note(p,sess){ requireTeacher(sess);
+    const sn=String(p.student_number||"").trim();
+    const s=store.students.find(x=>x.student_number===sn&&truthy(x.active));
+    if(!s) throw E("Student not found.");
+    if(!scopes(sess,s.grade)) throw E("Out of your grade scope.");
+    const t=store.teachers.find(x=>x.email===sess.email);
+    const note={note_id:uuid(),student_number:sn,grade:s.grade,author_email:sess.email,
+      author_name:t?t.display_name:sess.email,note_text:String(p.note_text||"").trim(),
+      created_at:nowIso(),updated_at:nowIso()};
+    // Notify other teachers who have previously noted this student.
+    const priorAuthors=[...new Set(store.teacherNotes.filter(n=>n.student_number===sn&&n.author_email!==sess.email).map(n=>n.author_email))];
+    store.teacherNotes.push(note);
+    priorAuthors.forEach(email=>{
+      notifyTeacher(email, s.grade, "note_added", "low",
+        (note.author_name||sess.email)+" added a note about student "+sn+", whom you've also noted.");
+    });
+    audit(sess,"note_added","TeacherNote",note.note_id,"Note added for student "+sn+".");
+    save(); return ok({ok:true, note_id:note.note_id});
+  },
+  add_restriction_note(p,sess){ requireTeacher(sess);
+    const id=String(p.restriction_id||"");
+    const rec=store.pairRestrictions.find(r=>r.restriction_id===id)||store.groupRestrictions.find(r=>r.group_id===id);
+    if(!rec) throw E("Restriction not found.");
+    const t=store.teachers.find(x=>x.email===sess.email);
+    if(!store.restrictionNotes) store.restrictionNotes=[];
+    const note={note_id:uuid(),restriction_id:id,author_email:sess.email,
+      author_name:t?t.display_name:sess.email,note_text:String(p.note_text||"").trim(),created_at:nowIso()};
+    store.restrictionNotes.push(note);
+    audit(sess,"restriction_note_added","Restriction",id,"Note added to restriction.");
+    save(); return ok({ok:true});
+  },
+  list_restriction_notes(p,sess){ requireTeacher(sess);
+    if(!store.restrictionNotes) store.restrictionNotes=[];
+    return ok({notes:store.restrictionNotes.filter(n=>n.restriction_id===String(p.restriction_id)).sort((a,b)=>b.created_at.localeCompare(a.created_at))});
+  },
+  edit_note(p,sess){ requireTeacher(sess);
+    const n=store.teacherNotes.find(x=>x.note_id===p.note_id);
+    if(!n) throw E("Note not found.");
+    if(n.author_email!==sess.email) throw E("You can only edit your own notes.");
+    n.note_text=String(p.note_text||"").trim(); n.updated_at=nowIso();
+    save(); return ok({ok:true});
+  },
+  delete_note(p,sess){ requireTeacher(sess);
+    const n=store.teacherNotes.find(x=>x.note_id===p.note_id);
+    if(!n) throw E("Note not found.");
+    const isAdmin=isAdminRole(sess.role);
+    if(n.author_email!==sess.email&&!isAdmin) throw E("You can only delete your own notes.");
+    store.teacherNotes=store.teacherNotes.filter(x=>x.note_id!==p.note_id);
+    audit(sess,"note_deleted","TeacherNote",p.note_id,"Note deleted for student "+n.student_number+".");
+    save(); return ok({ok:true});
+  },
+  list_notes(p,sess){ requireTeacher(sess);
+    const sn=String(p.student_number||"").trim();
+    const s=store.students.find(x=>x.student_number===sn);
+    if(!s||!scopes(sess,s.grade)) throw E("Student not found or out of scope.");
+    const notes=store.teacherNotes.filter(n=>n.student_number===sn)
+      .sort((a,b)=>b.created_at.localeCompare(a.created_at));
+    return ok({notes});
   },
   set_setting(p,sess){ requireAdmin(sess); setSetting(p.key,p.value??""); audit(sess,"setting_changed","Settings",p.key,'Setting "'+p.key+'" updated.'); save(); return ok({ok:true}); },
   list_settings(p,sess){ requireAdmin(sess); return ok({settings:store.settings}); },
@@ -704,6 +969,63 @@ function closePass(a, closedBy, method){
     teacher_id:a.teacher_id, destination:a.destination, check_out_time:a.check_out_time, check_in_time:nowIso(),
     duration_seconds:elapsed(a.check_out_time), closed_by:closedBy, closure_method:method, created_at:nowIso()});
   store.activePasses = store.activePasses.filter(x=>x.pass_id!==a.pass_id);
+  // Auto-resolve duration/not-returned alerts tied to this now-returned pass.
+  store.alerts.forEach(al=>{
+    if(al.status==="open" && al.student_number===a.student_number &&
+       (al.alert_type==="long_duration"||al.alert_type==="student_not_returned")){
+      al.status="auto_resolved"; al.acknowledged_by="system"; al.acknowledged_at=nowIso();
+      al.message=al.message+" (Student returned — auto-cleared.)";
+    }
+  });
+}
+
+/* ============================================================
+   Alert preferences — per teacher, by category. Avoids fatigue.
+   ============================================================ */
+const ALERT_CATEGORIES = [
+  {key:"long_duration",       label:"Long-duration trips",      desc:"A student has been out longer than the threshold."},
+  {key:"student_not_returned",label:"Student not returned",     desc:"A pass has been open well past expected return."},
+  {key:"pair_restriction",    label:"Pair restriction triggered",desc:"Two restricted students tried to be out together."},
+  {key:"group_restriction",   label:"Group restriction triggered",desc:"A group member tried to leave while another was out."},
+  {key:"frequency_outlier",   label:"Frequency outliers",        desc:"A student's trip count is outside the normal range."},
+  {key:"coordination",        label:"Coordination detected",     desc:"Students repeatedly leaving at the same time."},
+  {key:"cooldown",            label:"Cooldown / capacity delays",desc:"A trip was delayed by cooldown or a class limit."},
+  {key:"notification",        label:"Changes to your items",     desc:"Someone modified a restriction you created, or added a note to a student you follow."}
+];
+// Map an alert's type to a preference category.
+function alertCategory(alertType){
+  if(alertType==="long_duration") return "long_duration";
+  if(alertType==="student_not_returned") return "student_not_returned";
+  if(alertType==="pair_restriction") return "pair_restriction";
+  if(alertType==="group_restriction") return "group_restriction";
+  if(alertType==="frequency_outlier") return "frequency_outlier";
+  if(alertType==="coordination") return "coordination";
+  if(alertType==="notification"||alertType==="restriction_changed"||alertType==="note_added") return "notification";
+  return "cooldown"; // cooldown, grade/classroom capacity, etc.
+}
+// A teacher's prefs: { category: {on:bool, minSeverity:"low|medium|high"} }
+function getAlertPrefs(teacher){
+  let prefs={};
+  try{ prefs=JSON.parse(teacher.alert_preferences_json||"{}"); }catch(e){}
+  // default: everything on, minSeverity low
+  ALERT_CATEGORIES.forEach(c=>{ if(!prefs[c.key]) prefs[c.key]={on:true, minSeverity:"low"}; });
+  return prefs;
+}
+const SEV_RANK={low:0, medium:1, high:2};
+// Should this alert show for this teacher given their prefs?
+function alertPassesPrefs(alert, teacher){
+  const prefs=getAlertPrefs(teacher);
+  const cat=alertCategory(alert.alert_type);
+  const p=prefs[cat];
+  if(!p||!p.on) return false;
+  return SEV_RANK[alert.severity||"low"] >= SEV_RANK[p.minSeverity||"low"];
+}
+
+function notifyTeacher(targetEmail, grade, alertType, severity, message, relatedSn){
+  if(!targetEmail) return;
+  store.alerts.push({alert_id:uuid(), grade:grade||"", classroom_id:"", student_number:relatedSn||"",
+    related_student_number:"", alert_type:alertType, severity:severity||"low", message:message,
+    status:"open", created_at:nowIso(), acknowledged_by:"", acknowledged_at:"", target_email:targetEmail});
 }
 function createAlert(a){ const row={alert_id:uuid(), grade:a.grade, classroom_id:a.classroom_id, student_number:a.student_number,
   related_student_number:a.related_student_number||"", alert_type:a.alert_type, severity:a.severity||"medium", message:a.message,
@@ -726,6 +1048,7 @@ function scopes(sess,grade){ if(isAdminRole(sess.role))return true; return Strin
 function isAdminRole(r){ r=String(r||"").toLowerCase(); return r==="admin"||r==="administrator"; }
 function requireTeacher(sess){ if(!sess) throw E("Teacher sign-in required."); }
 function requireAdmin(sess){ requireTeacher(sess); if(!isAdminRole(sess.role)) throw E("Administrator access required."); }
+function safeParse(s,f){ try{return JSON.parse(s);}catch(e){return f;} }
 const ok=(data)=>({ok:true,data}); const sMsg=(m,x)=>Object.assign({studentMessage:m},x||{});
 const studentErr=(m)=>({ok:false, error:"bad_device", message:m, studentMessage:m});
 function E(m){ const e=new Error(m); return e; }
@@ -775,6 +1098,7 @@ function renderKiosk(){
   <div class="kiosk">
     <div class="kiosk-rail"></div>
     <div class="kiosk-head">
+      ${getLogoDataUrl()?`<img src="${getLogoDataUrl()}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:8px;box-shadow:0 2px 12px rgba(0,0,0,.18)" alt="School logo"/>`:``}
       <div class="kiosk-eyebrow">${esc(getSetting("school_name")||"Classroom")} · Room ${esc(roomNumberForKiosk())}</div>
       <div class="kiosk-title">Hall Pass</div>
       <div class="kiosk-sub">Enter your student number to check out or back in.</div>
@@ -782,7 +1106,7 @@ function renderKiosk(){
     <div class="kiosk-card">
       <div class="numscreen">
         <span class="label">Student #</span>
-        <span class="value ${kioskNum?"":"placeholder"}" id="numval">${kioskNum?esc(kioskNum):"— — — — —"}</span>
+        <span class="value ${kioskNum?"":"placeholder"}" id="numval">${kioskNum?esc(kioskNum):idPlaceholder()}</span>
       </div>
       <div class="dests" id="dests">
         ${destChip("Bathroom/Water","🚪","Bathroom / Water")}
@@ -818,17 +1142,78 @@ function renderKiosk(){
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 function destChip(val,ic,label){ return `<button class="chip" data-dest="${val}" aria-pressed="${kioskDest===val}"><span class="ic">${ic}</span>${esc(label)}</button>`; }
 function roomNumberForKiosk(){ const c=store.classrooms.find(x=>x.room_number); return c?c.room_number:"—"; }
-function keypad(k){ if(k==="clear")kioskNum=""; else if(k==="back")kioskNum=kioskNum.slice(0,-1);
-  else if(/^[0-9]$/.test(k)&&kioskNum.length<6)kioskNum+=k; const v=$("#numval");
-  if(v){ v.textContent=kioskNum||"— — — — —"; v.classList.toggle("placeholder",!kioskNum); } }
+function idPlaceholder(){
+  const l=parseInt(getSetting("student_id_length")||"0");
+  const active=store.students.filter(s=>truthy(s.active));
+  let len=l||6;
+  if(!l&&active.length){
+    const freq={};
+    active.forEach(s=>{const n=String(s.student_number).length; freq[n]=(freq[n]||0)+1;});
+    len=parseInt(Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]);
+  }
+  return Array(len).fill("—").join(" ");
+}
+function keypad(k){
+  const maxLen=parseInt(getSetting("student_id_length")||"0")||
+    (()=>{const a=store.students.filter(s=>truthy(s.active));if(!a.length)return 6;
+     const f={};a.forEach(s=>{const n=String(s.student_number).length;f[n]=(f[n]||0)+1;});
+     return parseInt(Object.entries(f).sort((a,b)=>b[1]-a[1])[0][0]);})();
+  if(k==="clear")kioskNum="";
+  else if(k==="back")kioskNum=kioskNum.slice(0,-1);
+  else if(/^[0-9]$/.test(k)&&kioskNum.length<maxLen)kioskNum+=k;
+  const v=$("#numval");
+  if(v){ v.textContent=kioskNum||idPlaceholder(); v.classList.toggle("placeholder",!kioskNum); }
+}
 async function submitKiosk(){
   // This browser is the provisioned classroom device, so it presents its device key.
   const r = await api("student_entry", {student_number:kioskNum, destination:kioskDest, device_key:getSetting("device_key")});
   const msg = (r.data&&r.data.studentMessage) || r.studentMessage || "Please ask your teacher.";
   const result = (r.data&&r.data.result) || r.result || "denied";
   showResult(msg, result);
-  kioskNum=""; const v=$("#numval"); if(v){v.textContent="— — — — —"; v.classList.add("placeholder");}
+  kioskNum=""; const v=$("#numval"); if(v){v.textContent=idPlaceholder(); v.classList.add("placeholder");}
 }
+// Web Audio tone generator (no external files — open source approach using oscillator)
+function playKioskTone(type){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+    if(type==="ok"){
+      // Two-note ascending chime: warm, pleasant
+      [[523.25,0,0.15],[659.25,0.18,0.25]].forEach(([freq,start,dur])=>{
+        const o=ctx.createOscillator(); o.type="sine";
+        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+        o.frequency.value=freq; g.gain.setValueAtTime(0,ctx.currentTime+start);
+        g.gain.linearRampToValueAtTime(0.28,ctx.currentTime+start+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+start+dur);
+        o.start(ctx.currentTime+start); o.stop(ctx.currentTime+start+dur+0.05);
+      });
+    } else if(type==="denied"){
+      // Low descending two-tone: firm but not obnoxious
+      [[330,0,0.18],[220,0.22,0.28]].forEach(([freq,start,dur])=>{
+        const o=ctx.createOscillator(); o.type="triangle";
+        const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+        o.frequency.value=freq; g.gain.setValueAtTime(0,ctx.currentTime+start);
+        g.gain.linearRampToValueAtTime(0.22,ctx.currentTime+start+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+start+dur);
+        o.start(ctx.currentTime+start); o.stop(ctx.currentTime+start+dur+0.05);
+      });
+    }
+    // "warn" (unknown number) = no sound per spec
+  }catch(e){}
+}
+
+function flashKiosk(color){
+  const kiosk=document.querySelector(".kiosk");
+  if(!kiosk) return;
+  const overlay=document.createElement("div");
+  overlay.style.cssText="position:absolute;inset:0;z-index:4;pointer-events:none;border-radius:0;opacity:0;transition:opacity .15s";
+  overlay.style.background=color==="green"?"rgba(31,138,91,.22)":color==="red"?"rgba(225,85,74,.22)":"rgba(217,138,31,.18)";
+  kiosk.style.position="relative"; kiosk.appendChild(overlay);
+  requestAnimationFrame(()=>{ overlay.style.opacity="1";
+    setTimeout(()=>{ overlay.style.opacity="0"; setTimeout(()=>overlay.remove(),200); },1800); });
+}
+
 function showResult(msg, result){
   const wait = (result==="delayed"||result==="denied"||result==="need_number");
   const icon = result==="checked_out"?"🟢":result==="checked_in"?"✅":result==="delayed"?"⏳":"ℹ️";
@@ -836,6 +1221,11 @@ function showResult(msg, result){
   const r=$("#result");
   r.innerHTML = `<div class="result-card ${wait?"wait":""}"><div class="big">${icon}</div><h2>${esc(title)}</h2><p>${esc(msg)}</p></div>`;
   r.classList.add("show");
+  // Color flash + sound
+  if(result==="checked_out"||result==="checked_in"){ flashKiosk("green"); playKioskTone("ok"); }
+  else if(result==="denied"){ flashKiosk("red"); playKioskTone("denied"); }
+  else if(result==="delayed"){ flashKiosk("red"); playKioskTone("denied"); }
+  else if(result==="need_number"){ flashKiosk("yellow"); /* unknown number: no sound */ }
   clearTimeout(showResult._t);
   showResult._t = setTimeout(()=>r.classList.remove("show"), result==="delayed"?4200:2600);
   r.onclick=()=>r.classList.remove("show");
@@ -872,11 +1262,12 @@ function signOut(){ session=null; route="console"; document.onkeydown=null; rend
 function renderConsole(){
   app.innerHTML="";
   app.appendChild(demoBar());
-  const openAlerts = store.alerts.filter(a=>a.status==="open"&&scopes(session,a.grade)).length;
+  const _teacher=store.teachers.find(t=>t.email===session.email)||session;
+  const openAlerts = store.alerts.filter(a=>a.status==="open"&&scopes(session,a.grade)&&alertPassesPrefs(a,_teacher)).length;
   const shell = el(`
   <div class="console">
     <div class="topbar">
-      <div class="brandmark"><span class="glyph">H</span>Hall Pass</div>
+      <div class="brandmark">${getLogoDataUrl()?`<img src="${getLogoDataUrl()}" style="width:28px;height:28px;border-radius:50%;object-fit:cover" alt=""/>`:'<span class="glyph">H</span>'} ${esc(getSetting("school_name")||"Hall Pass")}</div>
       <span class="who">${esc(session.display_name)} · <b>${isAdminRole(session.role)?"Administrator":"Grade "+esc(session.grade)+" · "+esc(session.classroom_id)}</b></span>
       <span class="spacer"></span>
       <span class="clock" id="clock"></span>
@@ -902,11 +1293,115 @@ function renderConsole(){
     </div>
   </div>`);
   app.appendChild(shell);
+  // UI helper chatbot launcher + panel
+  const helpFab=el('<button class="help-fab" id="helpfab" title="Help & guidance">?</button>');
+  const helpPanel=el(`<div class="help-panel" id="helppanel">
+    <div class="help-head"><span class="ht">Help</span><span class="hs">· guides you through the app</span><span class="hclose" id="helpclose">×</span></div>
+    <div class="help-body"></div>
+    <div class="help-chips"></div>
+    <div class="help-input"><input id="helpinput" placeholder="Ask how to do something..."/><button class="btn sm" id="helpsend">Ask</button></div>
+  </div>`);
+  app.appendChild(helpPanel); app.appendChild(helpFab);
+  helpFab.onclick=toggleHelp;
+  helpPanel.querySelector("#helpclose").onclick=()=>$("#helppanel").classList.remove("show");
+  helpPanel.querySelector("#helpsend").onclick=()=>{ const i=$("#helpinput"); const q=i.value.trim(); if(q){ i.value=""; askHelp(q); } };
+  helpPanel.querySelector("#helpinput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ const q=e.target.value.trim(); if(q){ e.target.value=""; askHelp(q); } } });
+
   $("#nav").addEventListener("click", e=>{ const b=e.target.closest("button[data-route]"); if(!b)return; route=b.dataset.route; renderConsole(); });
   $("#lockbtn").addEventListener("click", signOut);
   tickClock();
   renderView();
 }
+
+/* ============================================================
+   UI Helper chatbot — guides teachers through the interface.
+   Knows the UI and the rule system. Does NOT see student data.
+   ============================================================ */
+let helpLog=[];
+const HELP_SCREEN_INTRO = {
+  board:"You're on the Out board — it shows who's out right now with live timers. Tags turn amber when a trip runs long, red when a pass is left open too long.",
+  alerts:"This is Alerts. Each one is decision support, not an accusation. Use ⚙ Alert settings to mute categories you don't want to see.",
+  messages:"Messages lets you coordinate with other teachers — send to your grade, all staff, or an admin.",
+  students:"Students lists everyone in your scope. Tap a number for details, or use Manage to set cooldowns, exempt, add notes, or remove a student.",
+  restrictions:"Restrictions are arrangements between students. Pairs = two students who shouldn't be out together. Groups = only one member out at a time.",
+  insights:"Insights shows movement analytics — trips, durations, percentiles, and coordination patterns. Pick a time window at the top, including custom dates.",
+  notes:"Notes are observations about students, visible to all teachers in your grade. Great for documenting patterns or parent contact.",
+  assistant:"The Assistant analyzes your data — ask about frequency, outliers, coordination, or get a teacher/parent summary for a student.",
+  settings:"Settings is school-wide config: school year, alert thresholds, the school logo, student ID length, and the backend URL for live mode.",
+  audit:"The Audit log records every sensitive action — logins, removals, overrides, restriction changes. Admin-only."
+};
+const HELP_CHIPS = {
+  board:["What do the colors mean?","How do I end a pass?","What's an override?"],
+  alerts:["How do I mute alerts?","Why am I getting so many alerts?","What's an outlier?"],
+  students:["How do I set a cooldown?","How do I exempt a student?","How do I remove a student?"],
+  restrictions:["Pair vs group?","How do I add one?","Who can remove a restriction?"],
+  insights:["What's a percentile?","What does coordination mean?","How do custom dates work?"],
+  settings:["What's the device key?","How do I add our logo?","How do I go live?"],
+  _default:["How do I add a student?","What's a restriction?","How do alerts work?","How do I protect privacy?"]
+};
+
+function helpAnswer(q){
+  const ql=q.toLowerCase();
+  // route to current-screen intro
+  if(ql.includes("where am i")||ql.includes("this screen")||ql.includes("what is this")) return HELP_SCREEN_INTRO[route]||"This is the Hall Pass console.";
+  // colors
+  if(ql.includes("color")||ql.includes("colour")||ql.includes("what do the")) return "On the Out board: green = within normal time, amber = the trip is running long, red = the pass has been open too long (or a student hasn't been marked back in). On the kiosk: green flash + chime = approved, yellow = number not recognized, red + tone = denied.";
+  // ending a pass / override
+  if(ql.includes("end a pass")||ql.includes("mark in")||ql.includes("mark back")||ql.includes("return")) return "On the Out board, each student's tag has a 'Mark in' button. Click it to check them back in manually — useful when a kiosk return was missed.";
+  if(ql.includes("override")) return "An override lets you grant a pass to a student the system delayed (e.g. during a cooldown or restriction). Use 'Override a pass' on the Out board, enter their number, and pick a destination.";
+  // alerts
+  if(ql.includes("mute")||ql.includes("too many alert")||ql.includes("fatigue")||ql.includes("turn off alert")) return "Go to Alerts → ⚙ Alert settings. You can turn off any category (long trips, restrictions, outliers, coordination, etc.) and set a minimum severity. This only affects YOUR view — the data is still recorded. It's the best way to cut noise.";
+  if(ql.includes("outlier")) return "An outlier is a student whose trip count or trip length is outside the normal range for their class (by default, 2 standard deviations). It's context to review — never proof of anything. Exempt students don't generate these.";
+  // students
+  if(ql.includes("add a student")||ql.includes("add student")) return "Go to Students → '+ Add student'. You only need a number; grade and room default to yours. As you type, matching numbers suggest themselves. For a whole class, use 'Bulk add'.";
+  if(ql.includes("cooldown")) return "A cooldown is the minimum wait between a student's bathroom/water trips. Set a class-wide one in Students → 'Class rules'. For one student, use Students → Manage → Rules tab, where you can override the class default.";
+  if(ql.includes("exempt")||ql.includes("accommodation")) return "Marking a student alert-exempt stops frequency/duration alerts for them — useful for approved accommodations. Their trips are still tracked. Toggle it in Students → Manage → Rules, or from their Details panel.";
+  if(ql.includes("remove a student")||ql.includes("delete a student")) return "Students → Manage → Remove tab. You'll type the number to confirm. This permanently purges ALL their data — history, alerts, notes, restrictions. It can't be undone.";
+  // restrictions
+  if((ql.includes("pair")&&ql.includes("group"))||ql.includes("vs group")||ql.includes("difference")) return "A pair restriction is between two specific students who shouldn't be out at the same time. A group restriction means only one member of a named group can be out at a time. Both can delay, require approval, block, or just alert.";
+  if(ql.includes("add")&&ql.includes("restriction")) return "Go to Restrictions. Use '+ Pair restriction' for two students or '+ Group' for several. You'll pick an action (delay, approval, block, alert), a reason, and can add a comment. Numbers autocomplete as you type.";
+  if((ql.includes("remove")||ql.includes("delete"))&&ql.includes("restriction")) return "Any teacher can remove a restriction. Click 'Remove' on it in the Restrictions tab. You'll be asked for an optional note, and the person who created it gets notified.";
+  // insights
+  if(ql.includes("percentile")) return "A percentile shows where a student sits versus classmates. 84th percentile for frequency means they go more often than 84% of the class — toward the higher end. Below 50 means they go less than most.";
+  if(ql.includes("coordinat")) return "Coordination detection flags pairs of students who repeatedly leave at the same time or within a few minutes of each other. It's in the Insights tab and the Assistant. It's a signal to review, not proof — kids may just share a schedule.";
+  if(ql.includes("custom date")||ql.includes("date range")) return "In Insights, click 'Custom' next to the time-window buttons. Two date pickers appear — choose a start and end, and all the stats recalculate for that range.";
+  // settings / privacy
+  if(ql.includes("device key")) return "The device key is a code the classroom kiosk presents so the student endpoint isn't open to anyone with the link. Set it in Settings before going live. Students never see or type it.";
+  if(ql.includes("logo")||ql.includes("mascot")) return "Admins can upload a school logo in Settings → Security & privacy. It shows on the kiosk and in the header.";
+  if(ql.includes("go live")||ql.includes("real data")||ql.includes("backend")) return "When your Google Apps Script backend is deployed, paste its /exec URL into Settings → Backend URL and reload. The same app then uses your real Google Sheet instead of demo data.";
+  if(ql.includes("privacy")||ql.includes("ferpa")||ql.includes("student data")||ql.includes("safe")) return "The system stores only a student number, grade, and classroom — no names, photos, or medical info. Students see neutral messages and never see restrictions or notes. Removing a student purges all their data. The AI is read-only and (in the live app) sees only aggregate summaries.";
+  if(ql.includes("note")) return "You can add notes to a student (Students → Manage → Notes, or their Details panel) and to a restriction (edit it and use the notes thread). Notes are visible to all teachers in your grade — handy for documenting context or parent contact.";
+  // fallback
+  return (HELP_SCREEN_INTRO[route]||"I can help you find your way around.")+"\n\nTry asking about: adding students, cooldowns, restrictions, alerts, percentiles, or privacy. Or tell me what you're trying to do.";
+}
+
+function helpChips(){ return HELP_CHIPS[route]||HELP_CHIPS._default; }
+
+function renderHelpPanel(){
+  const panel=$("#helppanel"); if(!panel) return;
+  const body=panel.querySelector(".help-body");
+  body.innerHTML = helpLog.map(m=>`<div class="help-msg ${m.role}">${esc(m.text)}</div>`).join("");
+  body.scrollTop=body.scrollHeight;
+  const chipsBox=panel.querySelector(".help-chips");
+  chipsBox.innerHTML=helpChips().map(c=>`<span class="help-chip" data-hq="${esc(c)}">${esc(c)}</span>`).join("");
+  chipsBox.querySelectorAll("[data-hq]").forEach(c=>c.onclick=()=>askHelp(c.dataset.hq));
+}
+function askHelp(q){
+  helpLog.push({role:"user",text:q});
+  helpLog.push({role:"bot",text:helpAnswer(q)});
+  renderHelpPanel();
+}
+function toggleHelp(){
+  const panel=$("#helppanel");
+  if(!panel) return;
+  const showing=panel.classList.toggle("show");
+  if(showing){
+    if(!helpLog.length) helpLog.push({role:"bot",text:(HELP_SCREEN_INTRO[route]||"Hi! I'm here to help you use Hall Pass.")+"\n\nWhat can I help you with? Tap a suggestion below or ask anything."});
+    renderHelpPanel();
+    const inp=panel.querySelector("input"); if(inp) inp.focus();
+  }
+}
+
 function navBtn(key,ic,label,tag){ return `<button data-route="${key}" class="${route===key?"active":""}"><span class="ic">${ic}</span>${esc(label)}${tag?`<span class="navtag">${tag}</span>`:""}</button>`; }
 function tickClock(){ const c=$("#clock"); if(c) c.textContent=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
 
@@ -962,28 +1457,94 @@ async function onPassAction(e){ const b=e.target.closest("[data-return]"); if(!b
   if(r.ok){ toast("Marked returned · "+fmtDur(r.data.duration_seconds)); renderView(); } else toast(r.message); }
 async function onAlertAck(e){ const b=e.target.closest("[data-ack]"); if(!b)return;
   const r=await api("acknowledge_alert",{alert_id:b.dataset.ack}); if(r.ok){ toast("Alert acknowledged"); renderConsole(); } else toast(r.message); }
-function alertRow(a){ return `<div class="alertrow"><span class="sev sev-${esc(a.severity)}"></span>
-  <span class="msg">${esc(a.message)}</span>
+function alertRow(a, muted){ return `<div class="alertrow"><span class="sev sev-${esc(a.severity)}"></span>
+  <span class="msg">${esc(a.message)}${muted?' <span class="tag" style="background:var(--surface-2);color:var(--ink-faint)">muted</span>':''}</span>
   <button class="btn ghost sm" data-ack="${esc(a.alert_id)}">Done</button></div>`; }
 
 /* ---- alerts ---- */
+let alertsGradeFilter="";
 async function viewAlerts(v){
-  const r=await api("list_alerts",{status:"open"}); const alerts=r.data.alerts;
-  v.innerHTML=`<div class="view-head"><h1>Alerts</h1><span class="sub">Decision support — review context before acting</span></div>
-    <div class="panel"><div class="panel-body" id="alist">${alerts.length?alerts.map(alertRow).join(""):`<div class="empty"><div class="big">✓</div>No open alerts.</div>`}</div></div>`;
+  const r=await api("list_alerts",{status:"open",grade_filter:alertsGradeFilter||undefined}); const alerts=r.data.alerts; const hidden=r.data.hidden_by_prefs||0;
+  const isAdmin=isAdminRole(session.role);
+  const grades=[...new Set(store.students.filter(s=>truthy(s.active)).map(s=>s.grade))].sort();
+  v.innerHTML=`<div class="view-head"><h1>Alerts</h1><span class="sub">Decision support — review context before acting</span>
+    <span class="spacer"></span>
+    ${isAdmin?`<select id="gradefilter" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.85rem">
+      <option value="">All grades</option>${grades.map(g=>`<option value="${esc(g)}" ${alertsGradeFilter===g?"selected":""}>Grade ${esc(g)}</option>`).join("")}</select>`:""}
+    ${hidden>0?`<button class="btn ghost sm" id="showhidden">Show ${hidden} muted</button>`:""}
+    <button class="btn ghost sm" id="alertprefs">⚙ Alert settings</button></div>
+    ${hidden>0?`<div style="font-size:.84rem;color:var(--ink-faint);margin-bottom:10px">${hidden} alert${hidden!==1?"s are":" is"} hidden by your preferences. Adjust in Alert settings.</div>`:""}
+    <div class="panel"><div class="panel-body" id="alist">${alerts.length?alerts.map(alertRow).join(""):`<div class="empty"><div class="big">✓</div>No open alerts matching your preferences.</div>`}</div></div>`;
   $("#alist").addEventListener("click", onAlertAck);
+  $("#alertprefs").onclick=openAlertPrefs;
+  const gf=$("#gradefilter"); if(gf) gf.onchange=()=>{ alertsGradeFilter=gf.value; renderView(); };
+  const sh=$("#showhidden"); if(sh) sh.onclick=async()=>{
+    const all=await api("list_alerts",{status:"open",ignore_prefs:true});
+    $("#alist").innerHTML=all.data.alerts.length?all.data.alerts.map(a=>alertRow(a, true)).join(""):`<div class="empty">No alerts.</div>`;
+    $("#alist").addEventListener("click", onAlertAck);
+    sh.textContent="Showing all"; sh.disabled=true;
+  };
+}
+
+function openAlertPrefs(){
+  api("get_alert_prefs").then(res=>{
+    const prefs=res.data.prefs;
+    const sevOpts=(cur)=>["low","medium","high"].map(s=>`<option value="${s}" ${cur===s?"selected":""}>${s[0].toUpperCase()+s.slice(1)}+</option>`).join("");
+    showModal({ title:"Alert settings", desc:"Choose which alerts you see. Turning one off hides it from your board — the data is still recorded. This is personal to you.",
+      bodyHtml:`<div style="display:flex;flex-direction:column;gap:2px">
+        ${ALERT_CATEGORIES.map(c=>`
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)">
+            <label style="display:flex;align-items:center;cursor:pointer;flex:1;gap:10px">
+              <input type="checkbox" data-cat="${c.key}" ${prefs[c.key].on?"checked":""} style="width:auto"/>
+              <span><b style="font-size:.92rem">${esc(c.label)}</b><br><span style="font-size:.8rem;color:var(--ink-faint)">${esc(c.desc)}</span></span>
+            </label>
+            <select data-sev="${c.key}" ${prefs[c.key].on?"":"disabled"} style="border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:.82rem">${sevOpts(prefs[c.key].minSeverity)}</select>
+          </div>`).join("")}
+        </div>
+        <div style="font-size:.8rem;color:var(--ink-faint);margin-top:10px">The severity dropdown sets the minimum level you'll be alerted at. "Medium+" hides low-severity alerts in that category.</div>`,
+      footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn ghost" id="ap_reset">Reset to all on</button><button class="btn go" id="ap_save">Save preferences</button>`,
+      onMount:(m)=>{
+        // enable/disable severity when checkbox toggles
+        m.querySelectorAll("[data-cat]").forEach(cb=>cb.onchange=()=>{
+          const sev=m.querySelector(`[data-sev="${cb.dataset.cat}"]`); if(sev) sev.disabled=!cb.checked;
+        });
+        m.querySelector("#ap_reset").onclick=()=>{
+          m.querySelectorAll("[data-cat]").forEach(cb=>{ cb.checked=true; const sev=m.querySelector(`[data-sev="${cb.dataset.cat}"]`); if(sev){sev.disabled=false;sev.value="low";} });
+        };
+        m.querySelector("#ap_save").onclick=async()=>{
+          const newPrefs={};
+          ALERT_CATEGORIES.forEach(c=>{ const cb=m.querySelector(`[data-cat="${c.key}"]`); const sev=m.querySelector(`[data-sev="${c.key}"]`);
+            newPrefs[c.key]={on:cb.checked, minSeverity:sev.value}; });
+          const r=await api("save_alert_prefs",{prefs:newPrefs});
+          if(r.ok){ toast("Alert preferences saved"); closeModal(); renderConsole(); } else toast(r.message);
+        };
+      }});
+  });
 }
 
 /* ---- messages ---- */
+let messagesShowDismissed=false;
 async function viewMessages(v){
-  const r=await api("list_messages"); const msgs=r.data.messages;
+  const r=await api("list_messages",{include_dismissed:messagesShowDismissed}); const msgs=r.data.messages; const dCount=r.data.dismissed_count||0;
   v.innerHTML=`<div class="view-head"><h1>Messages</h1><span class="sub">Coordinate with other teachers</span><span class="spacer"></span>
+    ${dCount>0?`<button class="btn ghost sm" id="toggledismissed">${messagesShowDismissed?"Hide cleared":"Show "+dCount+" cleared"}</button>`:""}
     <button class="btn sm" id="newmsg">+ New message</button></div>
-    <div class="panel"><div class="panel-body">${msgs.length?msgs.map(m=>`
-      <div class="alertrow"><span class="sev sev-low"></span><span class="msg"><b>${esc(senderName(m.sender_email))}</b>
+    <div class="panel"><div class="panel-body" id="msglist">${msgs.length?msgs.map(m=>`
+      <div class="alertrow" style="${m.dismissed?'opacity:.5':''}"><span class="sev sev-low"></span><span class="msg"><b>${esc(senderName(m.sender_email))}</b>
         <span style="color:var(--ink-faint)">· ${esc(scopeLabel(m))}</span><br>${esc(m.message_text)}</span>
-        <span class="when">${esc(timeAgo(m.created_at))}</span></div>`).join(""):`<div class="empty">No messages yet.</div>`}</div></div>`;
+        <span class="when">${esc(timeAgo(m.created_at))}</span>
+        ${m.dismissed
+          ? `<button class="btn ghost sm" data-undismiss="${esc(m.message_id)}">Restore</button>`
+          : `<button class="btn ghost sm" data-dismiss="${esc(m.message_id)}">Clear</button>`}
+      </div>`).join(""):`<div class="empty">${messagesShowDismissed?"No messages.":"No new messages."}</div>`}</div></div>`;
   $("#newmsg").onclick=openNewMessage;
+  const td=$("#toggledismissed"); if(td) td.onclick=()=>{ messagesShowDismissed=!messagesShowDismissed; renderView(); };
+  $("#msglist").addEventListener("click", async e=>{
+    const bd=e.target.closest("[data-dismiss]");
+    if(bd){ await api("dismiss_message",{message_id:bd.dataset.dismiss}); toast("Message cleared"); renderView(); return; }
+    const bu=e.target.closest("[data-undismiss]");
+    if(bu){ await api("undismiss_message",{message_id:bu.dataset.undismiss}); toast("Message restored"); renderView(); return; }
+  });
 }
 function senderName(email){ const t=store.teachers.find(x=>x.email===email); return t?t.display_name:email; }
 function scopeLabel(m){ return ({all:"All staff",admin:"Admin",grade:"Grade "+m.grade,teacher:"Direct"}[m.recipient_scope]||m.recipient_scope); }
@@ -991,23 +1552,24 @@ function scopeLabel(m){ return ({all:"All staff",admin:"Admin",grade:"Grade "+m.
 /* ---- students ---- */
 async function viewStudents(v){
   const r=await api("list_students"); const studs=r.data.students.sort((a,b)=>a.student_number.localeCompare(b.student_number));
-  v.innerHTML=`<div class="view-head"><h1>Students</h1><span class="sub">${studs.length} active · minimal records (number only)</span><span class="spacer"></span>
+  v.innerHTML=`<div class="view-head"><h1>Students</h1><span class="sub">${studs.length} active · tap a number for full detail &amp; notes</span><span class="spacer"></span>
     <button class="btn ghost sm" id="classrules">Class rules</button><button class="btn ghost sm" id="bulk">Bulk add</button><button class="btn sm" id="add">+ Add student</button></div>
-    <div class="panel"><table class="grid"><thead><tr><th>Number</th><th>Grade</th><th>Room</th><th>Cooldown</th><th>Alerts</th><th></th></tr></thead>
-    <tbody>${studs.map(s=>`<tr><td class="mono"><b>${esc(s.student_number)}</b></td><td>${esc(s.grade)}</td><td>${esc(s.classroom_id)}</td>
+    <div class="panel"><table class="grid"><thead><tr><th>Number</th><th>Grade</th><th>Room</th><th>Cooldown</th><th>Alerts</th><th>Notes</th><th></th></tr></thead>
+    <tbody>${studs.map(s=>`<tr style="cursor:pointer" data-detail="${esc(s.student_number)}"><td class="mono"><b style="color:var(--console);text-decoration:underline">${esc(s.student_number)}</b></td><td>${esc(s.grade)}</td><td>${esc(s.classroom_id)}</td>
       <td class="mono">${s.custom_cooldown_minutes?s.custom_cooldown_minutes+"m <span style=\"color:var(--ink-faint);font-size:.78rem\">custom</span>":'<span style="color:var(--ink-faint)">class default</span>'}</td>
       <td>${s.alert_exempt?'<span class="tag exempt">exempt</span>':'<span style="color:var(--ink-faint)">tracked</span>'}</td>
+      <td class="mono">${store.teacherNotes.filter(n=>n.student_number===s.student_number).length||'<span style="color:var(--ink-faint)">—</span>'}</td>
       <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end">
-        <button class="btn ghost sm" data-toggle-exempt="${esc(s.student_number)}" title="${s.alert_exempt?"Remove alert exemption":"Mark as alert-exempt"}">${s.alert_exempt?"Remove exemption":"Exempt"}</button>
-        <button class="btn ghost sm" data-remove="${esc(s.student_number)}">Remove</button></td></tr>`).join("")}</tbody></table></div>`;
-  $("#add").onclick=openAddStudent; $("#bulk").onclick=openBulkAdd; $("#classrules").onclick=openClassRules;
+        <button class="btn ghost sm" data-detail-btn="${esc(s.student_number)}">Details</button>
+        <button class="btn sm" data-manage="${esc(s.student_number)}">Manage</button></td></tr>`).join("")}</tbody></table></div>`;
+  $("#add").onclick=()=>openAddStudent(); $("#bulk").onclick=()=>openBulkAdd(); $("#classrules").onclick=()=>openClassRules();
   v.querySelector("tbody").addEventListener("click", async e=>{
-    const br=e.target.closest("[data-remove]"); if(br){ openRemoveStudent(br.dataset.remove); return; }
-    const bc=e.target.closest("[data-set-cooldown]");
-    if(bc){ openSetCooldown(bc.dataset.setCooldown, bc.dataset.currentCd); return; }
-    const bt=e.target.closest("[data-toggle-exempt]");
-    if(bt){ const r=await api("toggle_alert_exempt",{student_number:bt.dataset.toggleExempt});
-      if(r.ok){ toast(r.data.now_exempt?"Alert exemption added":"Alert exemption removed"); renderView(); } else toast(r.message); }
+    const bm=e.target.closest("[data-manage]");
+    if(bm){ e.stopPropagation(); openManageStudent(bm.dataset.manage); return; }
+    const bd=e.target.closest("[data-detail-btn]");
+    if(bd){ e.stopPropagation(); openStudentDetail(bd.dataset.detailBtn, computeStats(session, insightsWin)); return; }
+    const row=e.target.closest("[data-detail]");
+    if(row){ openStudentDetail(row.dataset.detail, computeStats(session, insightsWin)); }
   });
 }
 
@@ -1015,16 +1577,28 @@ async function viewStudents(v){
 async function viewRestrictions(v){
   const r=await api("list_restrictions"); const {pairs,groups}=r.data;
   v.innerHTML=`<div class="view-head"><h1>Restrictions</h1><span class="sub">Reasons never appear on the student screen</span><span class="spacer"></span>
-    <button class="btn sm" id="newpair">+ Pair restriction</button></div>
+    <button class="btn ghost sm" id="newgroup">+ Group</button><button class="btn sm" id="newpair">+ Pair restriction</button></div>
     <div class="panel" style="margin-bottom:16px"><div class="panel-head">Pairs <span class="count">${pairs.length}</span></div>
       <div class="panel-body">${pairs.length?pairs.map(p=>`<div class="alertrow"><span class="sev sev-medium"></span>
-        <span class="msg"><b class="mono">${esc(p.student_a_number)}</b> & <b class="mono">${esc(p.student_b_number)}</b> · ${esc(p.action_type)} · ${esc(p.destination_scope)}
-        <br><span style="color:var(--ink-faint);font-size:.85rem">${esc(p.reason_category)}${p.private_note?" — "+esc(p.private_note):""}</span></span></div>`).join(""):`<div class="empty">No pair restrictions.</div>`}</div></div>
+        <span class="msg" title="${esc("Added by: "+(p.created_by_name||p.created_by||"unknown")+(p.comment?"\nComment: "+p.comment:"")+(p.private_note?"\nNote: "+p.private_note:""))}" style="cursor:help;flex:1">
+          <b class="mono">${esc(p.student_a_number)}</b> & <b class="mono">${esc(p.student_b_number)}</b> · ${esc(p.action_type)} · ${esc(p.destination_scope)}
+          <br><span style="color:var(--ink-faint);font-size:.85rem">${esc(p.reason_category)} · Added by ${esc(p.created_by_name||p.created_by||"unknown")}${p.comment?' — hover for comment':''}</span>
+        </span>
+        <button class="btn ghost sm" data-edit-pair="${esc(p.restriction_id)}" style="flex-shrink:0">Edit</button>
+        <button class="btn ghost sm" data-remove-restriction="${esc(p.restriction_id)}" style="flex-shrink:0">Remove</button>
+        </div>`).join(""):`<div class="empty">No pair restrictions.</div>`}</div></div>
     <div class="panel"><div class="panel-head">Groups <span class="count">${groups.length}</span></div>
       <div class="panel-body">${groups.length?groups.map(g=>`<div class="alertrow"><span class="sev sev-medium"></span>
-        <span class="msg"><b>${esc(g.group_name)}</b> · only one out at a time · ${esc(g.destination_scope)}
-        <br><span class="mono" style="color:var(--ink-faint);font-size:.85rem">${parseArr(g.student_numbers_json).map(esc).join(", ")}</span></span></div>`).join(""):`<div class="empty">No group restrictions.</div>`}</div></div>`;
-  $("#newpair").onclick=openNewPair;
+        <span class="msg" style="flex:1;cursor:help" title="${esc("Added by: "+(g.created_by_name||g.created_by||"unknown")+(g.comment?"\nComment: "+g.comment:""))}"><b>${esc(g.group_name)}</b> · only one out at a time · ${esc(g.destination_scope)}
+        <br><span class="mono" style="color:var(--ink-faint);font-size:.85rem">${parseArr(g.student_numbers_json).map(esc).join(", ")}</span>
+        <br><span style="color:var(--ink-faint);font-size:.82rem">${esc(g.reason_category||"")} · Added by ${esc(g.created_by_name||g.created_by||"unknown")}${g.comment?" — hover for comment":""}</span></span>
+        <button class="btn ghost sm" data-edit-group="${esc(g.group_id)}" style="flex-shrink:0">Edit</button>
+        <button class="btn ghost sm" data-remove-restriction="${esc(g.group_id)}" style="flex-shrink:0">Remove</button>
+        </div>`).join(""):`<div class="empty">No group restrictions.</div>`}</div></div>`;
+  $("#newpair").onclick=()=>openNewPair(); $("#newgroup").onclick=()=>openNewGroup();
+  v.querySelectorAll("[data-remove-restriction]").forEach(b=>b.onclick=()=>openRemoveRestriction(b.dataset.removeRestriction));
+  v.querySelectorAll("[data-edit-group]").forEach(b=>b.onclick=()=>openEditGroup(b.dataset.editGroup));
+  v.querySelectorAll("[data-edit-pair]").forEach(b=>b.onclick=()=>openEditPair(b.dataset.editPair));
 }
 
 /* ---- settings (admin) ---- */
@@ -1051,6 +1625,19 @@ async function viewSettings(v){
         ${setField("device_key","Student device key","text",s.device_key,"The kiosk must present this key. Set before go-live.")}
         ${setField("ai_enabled","AI assistant","select",s.ai_enabled,"Phase 2. Off by default for student privacy.",["false","true"])}
       </div>
+      <div class="field"><label>School logo / mascot <span class="help" title="Upload your school logo. Shown on the kiosk and in the console header. Stored locally in demo mode.">?</span></label>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div id="logo_preview" style="width:56px;height:56px;border-radius:50%;background:var(--surface-2);border:1.5px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:.75rem">
+            ${getLogoDataUrl()?`<img src="${getLogoDataUrl()}" style="width:100%;height:100%;object-fit:cover"/>`:"No logo"}
+          </div>
+          <div><input type="file" id="logo_upload" accept="image/*" style="font-size:.85rem"/>
+          <div style="font-size:.8rem;color:var(--ink-faint);margin-top:3px">PNG, JPG, or SVG. Shown on kiosk + header.</div>
+          ${getLogoDataUrl()?`<button class="btn ghost sm" id="logo_clear" style="margin-top:6px">Remove logo</button>`:""}</div>
+        </div></div>
+      <div class="row2">
+        ${setField("student_id_length","Student ID length (digits)","number",s.student_id_length||"6","Teachers are warned if they enter an ID with a different number of digits.")}
+        <div></div>
+      </div>
       <div class="field"><label>Backend URL (live mode) <span class="help" title="Paste your deployed Apps Script /exec URL to switch this same app off the demo data and onto your real Google Sheet.">?</span></label>
         <input id="liveurl" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(live)}"/>
         <div style="font-size:.8rem;color:var(--ink-faint);margin-top:4px">Leave blank to keep using demo data.</div></div>
@@ -1063,6 +1650,15 @@ async function viewSettings(v){
   $("#liveurl").addEventListener("change", e=>{ const u=e.target.value.trim();
     if(u) localStorage.setItem(CONFIG.LIVE_URL_KEY,u); else localStorage.removeItem(CONFIG.LIVE_URL_KEY);
     toast(u?"Live mode set — reload to use it":"Back to demo data"); });
+  const logoUp=$("#logo_upload");
+  if(logoUp) logoUp.onchange=(e)=>{
+    const f=e.target.files[0]; if(!f) return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{ setSetting("school_logo",ev.target.result); saveStore(); toast("Logo saved"); renderConsole(); };
+    reader.readAsDataURL(f);
+  };
+  const logoClear=$("#logo_clear");
+  if(logoClear) logoClear.onclick=()=>{ setSetting("school_logo",""); saveStore(); toast("Logo removed"); renderConsole(); };
   $("#reseed").onclick=()=>{ resetStore(); toast("Demo data reset"); renderConsole(); };
 }
 function setField(key,label,type,val,help,opts){
@@ -1085,6 +1681,44 @@ async function viewAudit(v){
 /* ==================================================================
    MODALS / FORMS
    ================================================================== */
+
+/* ============================================================
+   Student number autocomplete — attach to any input.
+   As the teacher types, shows matching student numbers in scope.
+   ============================================================ */
+function studentChoices(){
+  return store.students.filter(s=>truthy(s.active)&&scopes(session,s.grade))
+    .map(s=>({num:String(s.student_number), grade:s.grade, room:s.classroom_id}))
+    .sort((a,b)=>a.num.localeCompare(b.num));
+}
+function attachAutocomplete(input){
+  if(!input) return;
+  const wrap=document.createElement("span"); wrap.className="ac-wrap";
+  input.parentNode.insertBefore(wrap, input); wrap.appendChild(input);
+  const list=document.createElement("div"); list.className="ac-list"; wrap.appendChild(list);
+  let active=-1, items=[];
+  const choices=studentChoices();
+  function render(){
+    const q=input.value.trim();
+    items = q ? choices.filter(c=>c.num.startsWith(q)).slice(0,30) : choices.slice(0,30);
+    if(!items.length || (items.length===1 && items[0].num===q)){ list.classList.remove("show"); return; }
+    list.innerHTML=items.map((c,i)=>`<div class="ac-item ${i===active?'active':''}" data-i="${i}">
+      <span class="acn">${esc(c.num)}</span><span class="acm">Grade ${esc(c.grade)} · Room ${esc(c.room)}</span></div>`).join("");
+    list.classList.add("show");
+    list.querySelectorAll(".ac-item").forEach(el=>el.onclick=()=>{ input.value=items[el.dataset.i].num; list.classList.remove("show"); input.dispatchEvent(new Event("input",{bubbles:true})); input.focus(); });
+  }
+  input.addEventListener("input", ()=>{ active=-1; render(); });
+  input.addEventListener("focus", render);
+  input.addEventListener("keydown", e=>{
+    if(!list.classList.contains("show")) return;
+    if(e.key==="ArrowDown"){ e.preventDefault(); active=Math.min(active+1,items.length-1); render(); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); active=Math.max(active-1,0); render(); }
+    else if(e.key==="Enter"&&active>=0){ e.preventDefault(); input.value=items[active].num; list.classList.remove("show"); input.dispatchEvent(new Event("input",{bubbles:true})); }
+    else if(e.key==="Escape"){ list.classList.remove("show"); }
+  });
+  document.addEventListener("click", e=>{ if(!wrap.contains(e.target)) list.classList.remove("show"); });
+}
+
 function showModal({title,desc,bodyHtml,footHtml,onMount}){
   const scrim=$("#scrim");
   scrim.innerHTML=`<div class="modal"><div class="modal-head"><h2>${esc(title)}</h2>${desc?`<p>${esc(desc)}</p>`:""}</div>
@@ -1095,6 +1729,113 @@ function showModal({title,desc,bodyHtml,footHtml,onMount}){
   if(onMount) onMount(scrim.querySelector(".modal"));
 }
 function closeModal(){ const s=$("#scrim"); s.classList.remove("show"); s.innerHTML=""; }
+
+function openManageStudent(sn){
+  const s=store.students.find(x=>x.student_number===sn&&truthy(x.active));
+  if(!s){ toast("Student not found"); return; }
+  const notes=store.teacherNotes.filter(n=>n.student_number===sn).sort((a,b)=>b.created_at.localeCompare(a.created_at));
+  const classCd=getSetting("default_cooldown_minutes")||"10";
+  const teacherName=store.teachers.find(t=>t.email===session.email)?.display_name||session.email;
+
+  showModal({
+    title:"Manage — Student "+sn,
+    desc:"Grade "+s.grade+" · Room "+s.classroom_id,
+    bodyHtml:`
+      <div style="display:flex;gap:4px;border-bottom:1.5px solid var(--line);margin-bottom:16px">
+        <button class="mtab active" data-mtab="rules">Rules</button>
+        <button class="mtab" data-mtab="notes">Notes (${notes.length})</button>
+        <button class="mtab" data-mtab="remove">Remove</button>
+      </div>
+
+      <div class="mpane" data-pane="rules">
+        <div class="field"><label>Cooldown between bathroom/water trips
+          <span class="help" title="Overrides the class default for this student only. Blank = use class default.">?</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="m_cd" type="number" min="0" max="120" value="${esc(s.custom_cooldown_minutes||'')}" placeholder="Class default (${esc(classCd)} min)" style="flex:1"/>
+            <span style="font-size:.82rem;color:var(--ink-faint);white-space:nowrap">min</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+            ${[5,10,15,20,30].map(n=>`<button class="btn ghost sm" data-cdquick="${n}">${n}</button>`).join("")}
+            <button class="btn ghost sm" data-cdquick="">Class default</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--ink-faint);margin-top:6px">Currently: ${s.custom_cooldown_minutes?`<b>${esc(s.custom_cooldown_minutes)} min</b> (custom)`:`class default (${esc(classCd)} min)`}</div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="m_exempt" ${truthy(s.alert_exempt)?"checked":""} style="width:auto"/>
+            Alert-exempt (suppress frequency &amp; duration alerts)
+          </label>
+          <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Use for students with approved accommodations. Trips are still tracked.</div>
+        </div>
+        <div class="field" style="margin-top:14px"><label>Quick note about this change <span style="color:var(--ink-faint);font-weight:400">(optional)</span></label>
+          <textarea id="m_changenote" rows="2" placeholder="e.g. Extending cooldown per parent conversation."></textarea></div>
+      </div>
+
+      <div class="mpane" data-pane="notes" style="display:none">
+        <div id="m_noteslist" style="max-height:240px;overflow-y:auto;margin-bottom:12px">
+          ${notes.length?notes.map(n=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)">
+            <div style="font-size:.78rem;color:var(--ink-faint);margin-bottom:3px">${esc(n.author_name)} · ${esc(n.created_at.slice(0,10))}${n.updated_at!==n.created_at?" (edited)":""}</div>
+            <div style="font-size:.92rem">${esc(n.note_text)}</div>
+            ${n.author_email===session.email?`<button class="btn ghost sm" data-delnote="${esc(n.note_id)}" style="margin-top:5px">Delete</button>`:""}
+          </div>`).join(""):'<div style="color:var(--ink-faint);font-size:.9rem;padding:8px 0">No notes yet. Notes are visible to all teachers in this grade.</div>'}
+        </div>
+        <div class="field"><label>Add a note</label>
+          <textarea id="m_newnote" rows="3" placeholder="Observations, parent contact, context..."></textarea></div>
+        <button class="btn go sm" id="m_addnote">Add note</button>
+      </div>
+
+      <div class="mpane" data-pane="remove" style="display:none">
+        <div style="background:var(--signal-wash);border-radius:10px;padding:14px;font-size:.9rem;color:var(--signal-ink);margin-bottom:14px">
+          Removing this student permanently deletes <b>all</b> of their data — pass history, alerts, restrictions, notes, and AI logs. This cannot be undone.
+        </div>
+        <div class="field"><label>Type the student number to confirm</label>
+          <input id="m_confirm" placeholder="${esc(sn)}"/></div>
+        <button class="btn danger" id="m_remove">Permanently remove student ${esc(sn)}</button>
+      </div>`,
+    footHtml:`<button class="btn ghost" data-close>Close</button><button class="btn go" id="m_save">Save rules</button>`,
+    onMount:(m)=>{
+      // Tab switching
+      m.querySelectorAll(".mtab").forEach(t=>t.onclick=()=>{
+        m.querySelectorAll(".mtab").forEach(x=>x.classList.toggle("active",x===t));
+        m.querySelectorAll(".mpane").forEach(p=>p.style.display=p.dataset.pane===t.dataset.mtab?"block":"none");
+        // Save button only relevant on rules tab
+        m.querySelector("#m_save").style.display=t.dataset.mtab==="rules"?"":"none";
+      });
+      // Cooldown quick buttons
+      m.querySelectorAll("[data-cdquick]").forEach(b=>b.onclick=()=>{ m.querySelector("#m_cd").value=b.dataset.cdquick; });
+      // Save rules (cooldown + exempt + optional note)
+      m.querySelector("#m_save").onclick=async()=>{
+        const cdVal=m.querySelector("#m_cd").value.trim();
+        const exemptVal=m.querySelector("#m_exempt").checked;
+        const changeNote=m.querySelector("#m_changenote").value.trim();
+        const cdRes=await api("set_student_cooldown",{student_number:sn,minutes:cdVal});
+        if(!cdRes.ok){ toast(cdRes.message); return; }
+        // Toggle exempt only if changed
+        if(exemptVal!==truthy(s.alert_exempt)) await api("toggle_alert_exempt",{student_number:sn});
+        if(changeNote) await api("add_note",{student_number:sn,note_text:"[Rule change] "+changeNote});
+        toast("Saved"); closeModal(); renderView();
+      };
+      // Notes tab
+      const addBtn=m.querySelector("#m_addnote");
+      if(addBtn) addBtn.onclick=async()=>{
+        const txt=m.querySelector("#m_newnote").value.trim(); if(!txt){ toast("Enter a note"); return; }
+        const r=await api("add_note",{student_number:sn,note_text:txt});
+        if(r.ok){ toast("Note added"); closeModal(); openManageStudent(sn); } else toast(r.message);
+      };
+      m.querySelectorAll("[data-delnote]").forEach(b=>b.onclick=async()=>{
+        const r=await api("delete_note",{note_id:b.dataset.delnote});
+        if(r.ok){ toast("Note deleted"); closeModal(); openManageStudent(sn); } else toast(r.message);
+      });
+      // Remove tab
+      const rmBtn=m.querySelector("#m_remove");
+      if(rmBtn) rmBtn.onclick=async()=>{
+        if(m.querySelector("#m_confirm").value.trim()!==sn){ toast("Number doesn't match"); return; }
+        const r=await api("remove_student",{student_number:sn});
+        if(r.ok){ toast("Removed · "+r.data.rows_purged+" rows purged"); closeModal(); renderView(); } else toast(r.message);
+      };
+    }
+  });
+}
 
 function openSetCooldown(sn, currentMins){
   const classCd = getSetting("default_cooldown_minutes") || "10";
@@ -1156,7 +1897,7 @@ function openClassRules(){
 
 function openAddStudent(){
   showModal({ title:"Add student", desc:"Minimal record — a number is all that's required.",
-    bodyHtml:`<div class="field"><label>Student number</label><input id="f_sn" inputmode="numeric" placeholder="e.g. 30011"/></div>
+    bodyHtml:`<div class="field"><label>Student number</label><input id="f_sn" inputmode="numeric" placeholder="e.g. 130001"/><div id="f_sn_warn" style="display:none;font-size:.82rem;color:var(--wait-ink);margin-top:4px;padding:6px 10px;background:var(--wait-wash);border-radius:8px"></div></div>
       <div class="row2"><div class="field"><label>Grade</label><input id="f_gr" value="${esc(session.grade||"")}"/></div>
       <div class="field"><label>Classroom</label><input id="f_room" value="${esc(session.classroom_id||"")}"/></div></div>
       <div class="field"><label><input type="checkbox" id="f_ex" style="width:auto;margin-right:6px"/>Exempt from frequency/duration alerts</label></div>`,
@@ -1190,14 +1931,140 @@ function openOverride(){
     bodyHtml:`<div class="field"><label>Student number</label><input id="o_sn" inputmode="numeric"/></div>
       <div class="field"><label>Destination</label><select id="o_dest"><option>Bathroom/Water</option><option>Nurse</option><option>Office</option></select></div>`,
     footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="go">Grant pass</button>`,
-    onMount:(m)=>{ m.querySelector("#go").onclick=async()=>{
+    onMount:(m)=>{ attachAutocomplete(m.querySelector("#o_sn"));
+      m.querySelector("#go").onclick=async()=>{
       const r=await api("override_pass",{student_number:$("#o_sn").value,destination:$("#o_dest").value});
       if(r.ok){ toast("Pass granted"); closeModal(); route="board"; renderConsole(); } else toast(r.message); }; }});
 }
+function openNewGroup(){
+  showModal({ title:"New group restriction", desc:"Students in a group can't be out at the same time. Add two or more student numbers.",
+    bodyHtml:`<div class="field"><label>Group name</label><input id="g_name" placeholder="e.g. Table 4"/></div>
+      <div class="field"><label>Add students</label>
+        <div style="display:flex;gap:8px"><input id="g_add" inputmode="numeric" placeholder="Type a student number"/>
+        <button class="btn ghost" id="g_addbtn" type="button">Add</button></div></div>
+      <div class="field"><label>Members</label><div id="g_members" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px;padding:8px;border:1.5px dashed var(--line);border-radius:10px"><span style="color:var(--ink-faint);font-size:.85rem">No members yet</span></div></div>
+      <div class="field"><label>When two try to go at once</label><select id="g_action">
+        <option value="delay">Delay & notify</option><option value="require_approval">Require approval</option>
+        <option value="block">Block while other is out</option><option value="alert_only">Alert only</option></select></div>
+      <div class="field"><label>Reason</label><select id="g_reason"><option>Socializing concern</option><option>Prior conflict</option>
+        <option>Teacher observation</option><option>Administrator request</option><option>Other</option></select></div>
+      <div class="field"><label>Comment <span style="color:var(--ink-faint);font-weight:400">(shown on hover to staff)</span></label><textarea id="g_comment" rows="2" placeholder="e.g. These three coordinate trips during independent work."></textarea></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="g_save">Create group</button>`,
+    onMount:(m)=>{
+      const members=[]; const addInput=m.querySelector("#g_add");
+      attachAutocomplete(addInput);
+      function paint(){
+        const box=m.querySelector("#g_members");
+        box.innerHTML = members.length ? members.map(n=>`<span class="tag" style="background:var(--console-wash);color:var(--console-ink);display:inline-flex;align-items:center;gap:5px">${esc(n)} <span data-rm="${esc(n)}" style="cursor:pointer;font-weight:800">×</span></span>`).join("") : '<span style="color:var(--ink-faint);font-size:.85rem">No members yet</span>';
+        box.querySelectorAll("[data-rm]").forEach(x=>x.onclick=()=>{ const i=members.indexOf(x.dataset.rm); if(i>=0)members.splice(i,1); paint(); });
+      }
+      function addMember(){ const n=addInput.value.trim(); if(!n) return;
+        if(!store.students.find(s=>s.student_number===n&&truthy(s.active))){ toast("No active student "+n); return; }
+        if(members.includes(n)){ toast("Already added"); return; }
+        members.push(n); addInput.value=""; paint(); addInput.focus(); }
+      m.querySelector("#g_addbtn").onclick=addMember;
+      addInput.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!document.querySelector(".ac-list.show")){ e.preventDefault(); addMember(); } });
+      m.querySelector("#g_save").onclick=async()=>{
+        if(members.length<2){ toast("Add at least 2 students."); return; }
+        const r=await api("create_group_restriction",{group_name:m.querySelector("#g_name").value.trim()||"Group",
+          student_numbers:members, action_type:m.querySelector("#g_action").value,
+          reason_category:m.querySelector("#g_reason").value, comment:m.querySelector("#g_comment").value});
+        if(r.ok){ toast("Group restriction created"); closeModal(); renderView(); } else toast(r.message);
+      };
+    }});
+}
+
+function openRemoveRestriction(id){
+  const pr=store.pairRestrictions.find(r=>r.restriction_id===id);
+  const gr=store.groupRestrictions.find(r=>r.group_id===id);
+  const rec=pr||gr;
+  if(!rec) return;
+  const desc=pr?("pair restriction between students "+pr.student_a_number+" and "+pr.student_b_number):("group restriction: "+gr.group_name);
+  const creator=rec.created_by_name||rec.created_by||"another teacher";
+  showModal({ title:"Remove restriction",
+    desc:`This will remove the ${desc}. This was added by ${creator}. They will be notified.`,
+    bodyHtml:`<div class="field"><label>Note (optional — explain why you're removing this)</label>
+      <textarea id="rm_note" rows="3" placeholder="e.g. Situation resolved, no longer needed."></textarea></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="rm_confirm">Remove restriction</button>`,
+    onMount:(m)=>{ m.querySelector("#rm_confirm").onclick=async()=>{
+      const r=await api("remove_restriction",{restriction_id:id,note:$("#rm_note").value});
+      if(r.ok){ toast("Restriction removed"); closeModal(); renderView(); } else toast(r.message);
+    }; }});
+}
+
+function openEditGroup(groupId){
+  const gr=store.groupRestrictions.find(r=>r.group_id===groupId);
+  if(!gr) return;
+  const members=parseArr(gr.student_numbers_json);
+  showModal({ title:"Edit group: "+gr.group_name,
+    bodyHtml:`<div class="field"><label>Group name</label><input id="eg_name" value="${esc(gr.group_name)}"/></div>
+      <div class="field"><label>Add a student</label>
+        <div style="display:flex;gap:8px"><input id="eg_add" inputmode="numeric" placeholder="Type a student number"/>
+        <button class="btn ghost" id="eg_addbtn" type="button">Add</button></div></div>
+      <div class="field"><label>Members (one per line)</label>
+      <textarea id="eg_members" rows="6">${members.join("\n")}</textarea>
+      <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Remove a line to remove that student.</div></div>
+      <div style="border-top:1px solid var(--line);margin:14px 0;padding-top:14px">
+        <div style="font-weight:700;font-size:.85rem;margin-bottom:8px">Restriction notes <span style="color:var(--ink-faint);font-weight:400">(visible to all staff)</span></div>
+        <div id="eg_notes" style="max-height:140px;overflow-y:auto;margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px"><input id="eg_newnote" placeholder="Add a note about this group..." style="flex:1"/><button class="btn ghost sm" id="eg_addnote" type="button">Add</button></div>
+      </div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="eg_save">Save changes</button>`,
+    onMount:(m)=>{ attachAutocomplete(m.querySelector("#eg_add")); renderRestrictionNotes(m, groupId, "eg_notes");
+      const an=m.querySelector("#eg_addnote"); if(an) an.onclick=async()=>{ const t=m.querySelector("#eg_newnote").value.trim(); if(!t)return;
+        const rr=await api("add_restriction_note",{restriction_id:groupId,note_text:t}); if(rr.ok){ m.querySelector("#eg_newnote").value=""; renderRestrictionNotes(m,groupId,"eg_notes"); toast("Note added"); } };
+      const addBtn=m.querySelector("#eg_addbtn");
+      if(addBtn) addBtn.onclick=()=>{ const ta=m.querySelector("#eg_members"); const a=m.querySelector("#eg_add");
+        if(a.value.trim()){ ta.value=(ta.value?ta.value+"\n":"")+a.value.trim(); a.value=""; } };
+      m.querySelector("#eg_save").onclick=async()=>{
+      const newMembers=m.querySelector("#eg_members").value.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+      if(newMembers.length<2){ toast("A group needs at least 2 students."); return; }
+      const r=await api("edit_group_restriction",{group_id:groupId,group_name:m.querySelector("#eg_name").value.trim(),student_numbers:newMembers});
+      if(r.ok){ toast("Group updated"); closeModal(); renderView(); } else toast(r.message);
+    }; }});
+}
+
+async function renderRestrictionNotes(modal, id, containerId){
+  const box=modal.querySelector("#"+(containerId||"ep_notes")); if(!box) return;
+  const r=await api("list_restriction_notes",{restriction_id:id});
+  const notes=r.ok?r.data.notes:[];
+  box.innerHTML = notes.length ? notes.map(n=>`<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:.86rem">
+    <span style="color:var(--ink-faint);font-size:.78rem">${esc(n.author_name)} · ${esc(n.created_at.slice(0,10))}</span><br>${esc(n.note_text)}</div>`).join("")
+    : '<div style="color:var(--ink-faint);font-size:.85rem">No notes yet.</div>';
+}
+
+function openEditPair(id){
+  const pr=store.pairRestrictions.find(r=>r.restriction_id===id);
+  if(!pr) return;
+  showModal({ title:"Edit pair restriction",
+    desc:"Students "+pr.student_a_number+" & "+pr.student_b_number+" · added by "+(pr.created_by_name||pr.created_by||"unknown"),
+    bodyHtml:`<div class="field"><label>When both try to go</label><select id="ep_action">
+        ${["delay","require_approval","block","alert_only"].map(a=>`<option value="${a}" ${pr.action_type===a?"selected":""}>${a==="delay"?"Delay & notify":a==="require_approval"?"Require approval":a==="block"?"Block while other is out":"Alert only"}</option>`).join("")}</select></div>
+      <div class="field"><label>Reason</label><select id="ep_reason">
+        ${["Socializing concern","Prior conflict","Teacher observation","Administrator request","Other"].map(rr=>`<option ${pr.reason_category===rr?"selected":""}>${rr}</option>`).join("")}</select></div>
+      <div class="field"><label>Comment (shown on hover)</label><textarea id="ep_comment" rows="2">${esc(pr.comment||"")}</textarea></div>
+      <div class="field"><label>Private note (staff only)</label><input id="ep_note" value="${esc(pr.private_note||"")}"/></div>
+      <div style="border-top:1px solid var(--line);margin:14px 0;padding-top:14px">
+        <div style="font-weight:700;font-size:.85rem;margin-bottom:8px">Restriction notes <span style="color:var(--ink-faint);font-weight:400">(visible to all staff)</span></div>
+        <div id="ep_notes" style="max-height:140px;overflow-y:auto;margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px"><input id="ep_newnote" placeholder="Add a note about this restriction..." style="flex:1"/><button class="btn ghost sm" id="ep_addnote" type="button">Add</button></div>
+      </div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="ep_save">Save changes</button>`,
+    onMount:(m)=>{ renderRestrictionNotes(m, id);
+      m.querySelector("#ep_addnote").onclick=async()=>{ const t=m.querySelector("#ep_newnote").value.trim(); if(!t)return;
+        const rr=await api("add_restriction_note",{restriction_id:id,note_text:t}); if(rr.ok){ m.querySelector("#ep_newnote").value=""; renderRestrictionNotes(m,id); toast("Note added"); } };
+      m.querySelector("#ep_save").onclick=async()=>{
+      const r=await api("edit_pair_restriction",{restriction_id:id,action_type:m.querySelector("#ep_action").value,
+        reason_category:m.querySelector("#ep_reason").value,comment:m.querySelector("#ep_comment").value,private_note:m.querySelector("#ep_note").value});
+      if(r.ok){ toast("Restriction updated"); closeModal(); renderView(); } else toast(r.message);
+    }; }});
+}
+
 function openNewPairPrefilled(a,b){
   openNewPair(a,b);
 }
 function openNewPair(prefillA,prefillB){
+  if(prefillA&&typeof prefillA!=="string") prefillA=""; if(prefillB&&typeof prefillB!=="string") prefillB="";
   showModal({ title:"New pair restriction", desc:"These two shouldn't be out at the same time. The student screen never shows why.",
     bodyHtml:`<div class="row2"><div class="field"><label>Student A</label><input id="p_a" inputmode="numeric" value="${esc(prefillA||'')}"/></div>
       <div class="field"><label>Student B</label><input id="p_b" inputmode="numeric" value="${esc(prefillB||'')}"/></div></div>
@@ -1206,11 +2073,13 @@ function openNewPair(prefillA,prefillB){
         <option value="block">Block while other is out</option><option value="alert_only">Alert only</option></select></div>
       <div class="field"><label>Reason</label><select id="p_reason"><option>Socializing concern</option><option>Prior conflict</option>
         <option>Teacher observation</option><option>Administrator request</option><option>Other</option></select></div></div>
-      <div class="field"><label>Private note (staff only)</label><input id="p_note"/></div>`,
+      <div class="field"><label>Private note (staff only)</label><input id="p_note"/></div>
+      <div class="field"><label>Comment / reason <span style="color:var(--ink-faint);font-weight:400">(shown on hover to staff)</span></label><textarea id="p_comment" rows="2" placeholder="e.g. Observed leaving together 4 times this week after lunch."></textarea></div>`,  
     footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="cp">Create</button>`,
-    onMount:(m)=>{ m.querySelector("#cp").onclick=async()=>{
+    onMount:(m)=>{ attachAutocomplete(m.querySelector("#p_a")); attachAutocomplete(m.querySelector("#p_b"));
+      m.querySelector("#cp").onclick=async()=>{
       const r=await api("create_pair_restriction",{student_a_number:$("#p_a").value,student_b_number:$("#p_b").value,
-        action_type:$("#p_action").value,reason_category:$("#p_reason").value,private_note:$("#p_note").value});
+        action_type:$("#p_action").value,reason_category:$("#p_reason").value,private_note:$("#p_note").value,comment:$("#p_comment").value});
       if(r.ok){ toast("Restriction created"); closeModal(); renderView(); } else toast(r.message); }; }});
 }
 function openNewMessage(){
@@ -1247,10 +2116,16 @@ function mean(a){ return a.length? a.reduce((x,y)=>x+y,0)/a.length : 0; }
 function median(a){ if(!a.length)return 0; const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; }
 function sd(a){ if(a.length<2)return 0; const m=mean(a); return Math.sqrt(mean(a.map(x=>(x-m)*(x-m)))); }
 function pctAtOrBelow(arr,val){ if(!arr.length)return 0; return Math.round(100*arr.filter(x=>x<=val).length/arr.length); }
-function windowStart(win){ if(win==="all")return 0; const d=new Date(); d.setDate(d.getDate()-7); return d.getTime(); }
+function windowStart(win){
+  if(win==="custom"&&insightsCustomStart) return new Date(insightsCustomStart).getTime();
+  if(win==="month") return Date.now()-30*86400000; if(win==="all")return 0; const d=new Date(); d.setDate(d.getDate()-7); return d.getTime(); }
 
+function windowEnd(win){
+  if(win==="custom"&&insightsCustomEnd) return new Date(insightsCustomEnd+"T23:59:59").getTime();
+  return Date.now();
+}
 function computeStats(sess, win){
-  const start=windowStart(win), inWin=(iso)=>new Date(iso).getTime()>=start;
+  const start=windowStart(win), wEnd=windowEnd(win), inWin=(iso)=>{const t=new Date(iso).getTime(); return t>=start&&t<=wEnd;};
   const scoped=store.students.filter(s=>truthy(s.active)&&scopes(sess,s.grade));
   const k=num(getSetting("default_outlier_standard_deviation"),2);
   const hist=store.passHistory.filter(h=>scopes(sess,h.grade)&&inWin(h.check_out_time));
@@ -1287,8 +2162,8 @@ function computeStats(sess, win){
 // "near-simultaneous" = checkout within overlapWindowMin of each other.
 function computeOverlaps(sess, win){
   const overlapWindowSec = num(getSetting("default_overlap_window_minutes"),3)*60;
-  const start = windowStart(win);
-  const hist = store.passHistory.filter(h=>scopes(sess,h.grade)&&new Date(h.check_out_time).getTime()>=start);
+  const start = windowStart(win), oEnd = windowEnd(win);
+  const hist = store.passHistory.filter(h=>scopes(sess,h.grade)&&new Date(h.check_out_time).getTime()>=start&&new Date(h.check_out_time).getTime()<=oEnd);
   const pairs = {};          // "A|B" -> {count, nearCount, lastSeen}
   const byStudent = {};
   hist.forEach(h=>{ (byStudent[h.student_number]=byStudent[h.student_number]||[]).push(h); });
@@ -1319,7 +2194,7 @@ function computeOverlaps(sess, win){
   return Object.values(pairs).sort((x,y)=>y.total-x.total);
 }
 
-let insightsWin="week", insightsSort={key:"trips",dir:-1};
+let insightsWin="week", insightsSort={key:"trips",dir:-1}, insightsCustomStart=null, insightsCustomEnd=null;
 function viewInsights(v){
   const live=localStorage.getItem(CONFIG.LIVE_URL_KEY);
   const st=computeStats(session,insightsWin), g=st.grade;
@@ -1344,10 +2219,17 @@ function viewInsights(v){
   const rows=[...st.rows].sort((a,b)=>{ let x=a[insightsSort.key],y=b[insightsSort.key]; if(x==null)x=-1; if(y==null)y=-1;
     return (x>y?1:x<y?-1:0)*insightsSort.dir; });
   v.innerHTML=`
-    <div class="view-head"><h1>Insights</h1><span class="sub">Movement patterns · ${esc(st.scopeLabel)} · ${insightsWin==="week"?"this week":"all time"}</span>
+    <div class="view-head"><h1>Insights</h1><span class="sub">Movement patterns · ${esc(st.scopeLabel)} · ${insightsWin==="week"?"this week":insightsWin==="month"?"past 30 days":insightsWin==="custom"&&insightsCustomStart?(insightsCustomStart+" → "+(insightsCustomEnd||"today")):"all time"}</span>
       <span class="spacer"></span>
-      <button class="btn ghost sm" data-win="week" ${insightsWin==="week"?'style="background:var(--console-wash);color:var(--console-ink)"':''}>This week</button>
-      <button class="btn ghost sm" data-win="all" ${insightsWin==="all"?'style="background:var(--console-wash);color:var(--console-ink)"':''}>All time</button></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button id="win_week" class="btn ghost sm" style="${insightsWin==='week'?'background:var(--console-wash);color:var(--console-ink)':''}">This week</button>
+        <button id="win_month" class="btn ghost sm" style="${insightsWin==='month'?'background:var(--console-wash);color:var(--console-ink)':''}">30 days</button>
+        <button id="win_all" class="btn ghost sm" style="${insightsWin==='all'?'background:var(--console-wash);color:var(--console-ink)':''}">All time</button>
+        <button id="win_custom" class="btn ghost sm" style="${insightsWin==='custom'?'background:var(--console-wash);color:var(--console-ink)':''}">📅 Custom</button>
+        ${insightsWin==='custom'?`<input type="date" id="cust_start" value="${insightsCustomStart||''}" style="border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:.85rem"/>
+        <span style="color:var(--ink-faint)">to</span>
+        <input type="date" id="cust_end" value="${insightsCustomEnd||''}" style="border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:.85rem"/>`:''}
+      </div></div>
     ${live?`<div class="panel" style="margin-bottom:14px"><div class="panel-body" style="font-size:.85rem;color:var(--ink-soft)">Live mode is set, but Insights run on local demo data — server-side analytics are Phase 2.</div></div>`:""}
     ${g.limited?`<div class="panel" style="margin-bottom:14px;border-color:var(--wait)"><div class="panel-body" style="font-size:.88rem;color:var(--wait-ink)">Not enough data yet — fewer than 10 bathroom/water trips in scope. Comparisons and percentiles are preliminary until more trips are recorded.</div></div>`:""}
     <div class="cards" style="margin-bottom:16px">
@@ -1366,10 +2248,17 @@ function viewInsights(v){
           <td>${flagTags(r)}</td></tr>`).join("")}</tbody></table></div>
     <p style="font-size:.82rem;color:var(--ink-faint);margin-top:12px;max-width:72ch">Movement data may not be normally distributed. An outlier means a student is <b>outside the normal observed range</b> for this group — context to review, not proof of intent.</p>
     ${coordPanel}`;
-  v.querySelectorAll("[data-win]").forEach(b=>b.onclick=()=>{ insightsWin=b.dataset.win; viewInsights(v); });
+  const ww=v.querySelector("#win_week"),wm=v.querySelector("#win_month"),wa=v.querySelector("#win_all"),wc=v.querySelector("#win_custom");
+  if(ww) ww.onclick=()=>{ insightsWin="week"; insightsCustomStart=insightsCustomEnd=null; viewInsights(v); };
+  if(wm) wm.onclick=()=>{ insightsWin="month"; insightsCustomStart=insightsCustomEnd=null; viewInsights(v); };
+  if(wa) wa.onclick=()=>{ insightsWin="all";  insightsCustomStart=insightsCustomEnd=null; viewInsights(v); };
+  if(wc) wc.onclick=()=>{ insightsWin="custom"; viewInsights(v); };
+  const cs=v.querySelector("#cust_start"),ce=v.querySelector("#cust_end");
+  if(cs){ cs.value=insightsCustomStart||""; cs.onchange=()=>{ insightsCustomStart=cs.value||null; viewInsights(v); }; }
+  if(ce){ ce.value=insightsCustomEnd||"";   ce.onchange=()=>{ insightsCustomEnd=ce.value||null; viewInsights(v); }; }
   v.querySelectorAll("th[data-sort]").forEach(th=>th.onclick=()=>{ const k=th.dataset.sort;
     if(insightsSort.key===k) insightsSort.dir*=-1; else insightsSort={key:k,dir:k==="sn"?1:-1}; viewInsights(v); });
-  v.querySelectorAll("tbody tr").forEach(tr=>tr.onclick=()=>openStudentDetail(tr.dataset.sn, computeStats(session,insightsWin)));
+  v.querySelectorAll("tbody tr").forEach(tr=>tr.onclick=()=>{ assistantLastSn=tr.dataset.sn; openStudentDetail(tr.dataset.sn, computeStats(session,insightsWin)); });
   v.querySelectorAll("[data-pair-a]").forEach(b=>b.onclick=e=>{ e.stopPropagation();
     openNewPairPrefilled(b.dataset.pairA, b.dataset.pairB); });
 }
@@ -1383,6 +2272,7 @@ function flagTags(r){ let t="";
   return t||'<span style="color:var(--ink-faint)">—</span>'; }
 
 function openStudentDetail(sn, st){
+  const detailNotes=store.teacherNotes.filter(n=>n.student_number===sn).sort((a,b)=>b.created_at.localeCompare(a.created_at));
   const r=st.rows.find(x=>x.sn===sn); if(!r)return; const g=st.grade;
   const cmp=r.trips?(r.freqOutlier?"outside the normal observed range":"within the normal range"):"no trips recorded";
   const bars=r.durs.slice(-12).map(d=>{ const h=Math.max(6,Math.round(d/900*60));
@@ -1397,11 +2287,35 @@ function openStudentDetail(sn, st){
         <div style="display:flex;align-items:flex-end;gap:4px;height:66px;padding:8px;background:var(--surface-2);border-radius:10px">${bars||'<span style="color:var(--ink-faint)">No trips in window</span>'}</div></div>
       <p style="font-size:.93rem">${pctSentence(r, st)}</p>
       ${(r.nurse||r.office)?`<p style="font-size:.88rem;color:var(--ink-soft)">Also ${r.nurse} nurse and ${r.office} office visits this window (tracked separately).</p>`:""}
-      ${r.exempt?`<p style="font-size:.85rem;color:var(--console-ink)">Alert-exempt: frequency/duration alerts are suppressed for this student even when outside the range.</p>`:""}      ${r.customCd?`<p style="font-size:.85rem;color:var(--wait-ink)">Custom cooldown: <b>${r.customCd} minutes</b> between bathroom/water trips (class default: ${getSetting("default_cooldown_minutes")||"none"} min).</p>`:`<p style="font-size:.85rem;color:var(--ink-faint)">Cooldown: class default (${getSetting("default_cooldown_minutes")||"none"} min).</p>`}`,  
-    footHtml:`<button class="btn ghost" data-close>Close</button><button class="btn ghost" id="toggleExempt">${r.exempt?"Remove exemption":"Mark alert-exempt"}</button><button class="btn" id="parent">Parent-meeting summary</button>`,
+      ${r.exempt?`<p style="font-size:.85rem;color:var(--console-ink)">Alert-exempt: frequency/duration alerts are suppressed for this student even when outside the range.</p>`:""}      ${r.customCd?`<p style="font-size:.85rem;color:var(--wait-ink)">Custom cooldown: <b>${r.customCd} minutes</b> between bathroom/water trips (class default: ${getSetting("default_cooldown_minutes")||"none"} min).</p>`:`<p style="font-size:.85rem;color:var(--ink-faint)">Cooldown: class default (${getSetting("default_cooldown_minutes")||"none"} min).</p>`}
+      <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b style="font-size:.9rem">Teacher notes</b>
+          <span style="font-size:.78rem;color:var(--ink-faint)">${detailNotes.length} · all staff in this grade</span></div>
+        <div id="detail_notes" style="max-height:160px;overflow-y:auto">${detailNotes.length?detailNotes.map(n=>`
+          <div style="padding:8px 0;border-bottom:1px solid var(--line)">
+            <div style="font-size:.76rem;color:var(--ink-faint)">${esc(n.author_name)} · ${esc(n.created_at.slice(0,10))}${n.author_email===session.email?' · you':''}</div>
+            <div style="font-size:.88rem">${esc(n.note_text)}</div>
+            ${n.author_email===session.email?`<button class="btn ghost sm" data-delnote="${esc(n.note_id)}" style="margin-top:4px">Delete</button>`:""}
+          </div>`).join(""):'<div style="font-size:.85rem;color:var(--ink-faint)">No notes yet.</div>'}</div>
+        <div style="display:flex;gap:8px;margin-top:10px"><input id="detail_newnote" placeholder="Add a note..." style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.88rem"/>
+          <button class="btn go sm" id="detail_addnote">Add</button></div>
+      </div>`,
+    footHtml:`<button class="btn ghost" data-close>Close</button><button class="btn ghost" id="teacherbrief">Teacher brief</button><button class="btn" id="parent">Parent summary</button>`,
     onMount:(m)=>{
-      m.querySelector("#parent").onclick=()=>{ closeModal(); askAssistant("Summarize student "+sn+" for a parent meeting"); };
-      m.querySelector("#toggleExempt").onclick=async()=>{
+      m.querySelector("#parent").onclick=()=>{ assistantLastSn=sn; closeModal(); askAssistant("Summarize student "+sn+" for a parent meeting"); };
+      m.querySelector("#teacherbrief").onclick=()=>{ assistantLastSn=sn; closeModal(); askAssistant("Summarize student "+sn); };
+      const addNoteBtn=m.querySelector("#detail_addnote");
+      if(addNoteBtn) addNoteBtn.onclick=async()=>{
+        const txt=m.querySelector("#detail_newnote").value.trim(); if(!txt){ toast("Enter a note"); return; }
+        const rr=await api("add_note",{student_number:sn,note_text:txt});
+        if(rr.ok){ toast("Note added"); closeModal(); openStudentDetail(sn, computeStats(session, insightsWin)); } else toast(rr.message);
+      };
+      m.querySelectorAll("[data-delnote]").forEach(b=>b.onclick=async()=>{
+        const rr=await api("delete_note",{note_id:b.dataset.delnote});
+        if(rr.ok){ toast("Note deleted"); closeModal(); openStudentDetail(sn, computeStats(session, insightsWin)); } else toast(rr.message);
+      });
+      const te=m.querySelector("#toggleExempt");
+      if(te) te.onclick=async()=>{
         const res=await api("toggle_alert_exempt",{student_number:sn});
         if(res.ok){ toast(res.data.now_exempt?"Alert exemption added":"Alert exemption removed"); closeModal(); if(route==="students") renderView(); }
         else toast(res.message);
@@ -1430,8 +2344,10 @@ function pctSentence(r, st){
 
 /* ---- Assistant (local) ---- */
 let assistantLog=[];
+let assistantLastSn=null; // tracks the last student number sent to the assistant
 function viewAssistant(v){
-  const chips=["Who is leaving most often this week?","Who is taking the longest trips?","Show students outside 2 standard deviations","Are any students coordinating?","Who leaves together most often?","Is 30002 out more than others?","Who has the most nurse visits?","Summarize the group"];
+  const sn=assistantLastSn||"130002";
+  const chips=["Who is leaving most often this week?","Summarize student "+sn+" (teacher brief)","Summarize student "+sn+" for a parent meeting","Are any students coordinating?","Show students outside 2 standard deviations","Who has the most nurse visits?","Summarize the group"];
   v.innerHTML=`
     <div class="view-head"><h1>Assistant</h1><span class="sub">Ask about ${esc(isAdminRole(session.role)?"the school's":"your grade's")} movement data</span></div>
     <div class="panel" style="margin-bottom:14px"><div class="panel-body" style="font-size:.85rem;color:var(--ink-soft)">
@@ -1453,6 +2369,9 @@ function viewAssistant(v){
 function bubble(m){ const me=m.role==="user";
   return `<div style="align-self:${me?"flex-end":"flex-start"};max-width:84%;background:${me?"var(--console)":"var(--surface-2)"};color:${me?"#fff":"var(--ink)"};padding:10px 13px;border-radius:14px;font-size:.93rem;white-space:pre-wrap;line-height:1.5">${m.html||esc(m.text)}</div>`; }
 function askAssistant(q){
+  // Extract student number from the query to use in chip suggestions
+  const snMatch=q.match(/\b(1[0-9]{5})\b/);
+  if(snMatch) assistantLastSn=snMatch[1];
   assistantLog.push({role:"user",text:q});
   assistantLog.push({role:"bot",html:assistantAnswer(q)});
   if(route==="assistant") viewAssistant($("#view")); else { route="assistant"; renderConsole(); }
@@ -1525,6 +2444,27 @@ ALERT PHILOSOPHY
   trips are still tracked but do not generate frequency/duration alerts.
 `;
 
+
+// Count active restrictions a student is involved in (pairs + groups).
+function restrictionsFor(sn){
+  const pairs=store.pairRestrictions.filter(r=>truthy(r.active)&&(r.student_a_number===sn||r.student_b_number===sn));
+  const groups=store.groupRestrictions.filter(r=>truthy(r.active)&&parseArr(r.student_numbers_json).includes(sn));
+  return {pairs, groups, total:pairs.length+groups.length};
+}
+// Average restriction count across a scope, plus % with none.
+function restrictionContext(sess){
+  const students=store.students.filter(s=>truthy(s.active)&&scopes(sess,s.grade));
+  if(!students.length) return {avg:0, pctNone:0, n:0};
+  let totalCount=0, noneCount=0;
+  students.forEach(s=>{ const c=restrictionsFor(s.student_number).total; totalCount+=c; if(c===0)noneCount++; });
+  return {avg:totalCount/students.length, pctNone:Math.round(noneCount/students.length*100), n:students.length};
+}
+function describeRestriction(r, isGroup){
+  if(isGroup) return `Group "${r.group_name}" (one member out at a time)${r.reason_category?" — "+r.reason_category:""}`;
+  const partner=r.student_a_number; // caller resolves which is "other"
+  return `Pair restriction with student ${r._partner||partner} (${r.action_type})${r.reason_category?" — "+r.reason_category:""}`;
+}
+
 function assistantAnswer(q){
   const st=computeStats(session,"week"), ql=q.toLowerCase(), numMatch=q.match(/\b(\d{4,6})\b/);
   const caution="\n\nNote: movement data isn't necessarily normal — read this as \u201coutside the normal observed range,\u201d not proof of intent.";
@@ -1565,11 +2505,51 @@ function assistantAnswer(q){
   if(numMatch){
     const r=st.rows.find(x=>x.sn===numMatch[1]);
     if(!r) return esc("I don't see student "+numMatch[1]+" in "+st.scopeLabel+".");
-    if(ql.includes("summ")||ql.includes("parent"))
-      return esc(`Summary for student ${r.sn} (${st.scopeLabel}, this week):\n• ${r.trips} bathroom/water trips, average ${fmtDur(r.avg)}, longest ${fmtDur(r.longest)}.\n• Frequency: ${r.freqPct}th percentile. Trip length: ${r.durPct!=null?r.durPct+"th percentile":"n/a"}.\n• Also ${r.nurse} nurse, ${r.office} office visits (tracked separately).\nFraming: ${r.freqOutlier||r.durOutlier?"outside":"within"} the normal observed range for the group.`);
+    const sn=r.sn;
+    const restr=restrictionsFor(sn);
+    const notes=store.teacherNotes.filter(n=>n.student_number===sn).sort((a,b)=>b.created_at.localeCompare(a.created_at));
+
+    // ── PARENT-FACING SUMMARY ──
+    if(ql.includes("parent")){
+      const ctx=restrictionContext(session);
+      const winLabel=insightsWin==="week"?"the past week":insightsWin==="month"?"the past 30 days":insightsWin==="custom"&&insightsCustomStart?(insightsCustomStart+" to "+(insightsCustomEnd||"today")):"the school year to date";
+      const freqWord=r.freqPct>=80?"more frequently than most classmates":r.freqPct>=55?"somewhat more often than average":r.freqPct>=40?"about as often as their classmates":"less frequently than most classmates";
+      // Restriction context in plain language, no other student numbers
+      let restrLine="";
+      if(restr.total>0){
+        const avgTxt=ctx.avg.toFixed(1);
+        restrLine=`\n\nYour child is currently part of ${restr.total} hallway arrangement${restr.total!==1?"s":""} we use to help students stay focused. `+
+          `For context, about ${ctx.pctNone}% of students in the class have none, and the class average is ${avgTxt}. `+
+          `These arrangements simply mean we coordinate when certain students leave the room — for example, asking them to wait a few minutes if another student is already out. They are a supportive measure, not a disciplinary one.`;
+      }
+      const notesLine=notes.length?`\n\nTeacher observations on file:\n`+notes.map(n=>`• ${n.created_at.slice(0,10)}: ${n.note_text}`).join("\n"):"";
+      const patternNote=(r.freqOutlier||r.durOutlier)?`\n\nWe noticed your child's hallway use during ${winLabel} was somewhat higher than typical for the class. This isn't a concern on its own — we simply like to keep families informed and check in.`:"";
+      const exemptNote=r.exempt?`\n\nNote: Your child has an approved accommodation on file, so our automated reminders don't apply to them.`:"";
+      return esc(`Hall Pass — Parent Communication Summary\nStudent: ${sn} | Date: ${new Date().toLocaleDateString()}\n${"─".repeat(50)}\n\nDuring ${winLabel}, your child used their hall pass ${r.trips} time${r.trips!==1?"s":""} for bathroom or water, with an average trip of about ${fmtDur(Math.round(r.avg))}. Compared to classmates, they go ${freqWord}.${patternNote}${restrLine}${notesLine}${exemptNote}\n${"─".repeat(50)}\nThis summary supports an informed conversation and reflects movement data only. It does not imply any medical or behavioral conclusion. No other students are identified.\n\n[Copy, paste, and edit before sending.]`);
+    }
+
+    // ── TEACHER-FACING SUMMARY ──
+    if(ql.includes("summ")){
+      const cats=`Bathroom/Water: ${r.trips} trips (avg ${r.trips?fmtDur(r.avg):"—"}, longest ${r.trips?fmtDur(r.longest):"—"}) · Nurse: ${r.nurse} · Office: ${r.office}`;
+      const pctLine=`Frequency ${r.freqPct}th percentile (grade avg ${st.grade.meanTrips.toFixed(1)} trips). Trip length ${r.durPct!=null?r.durPct+"th percentile":"n/a"}.`;
+      let restrSection="No active restrictions.";
+      if(restr.total>0){
+        const lines=[];
+        restr.pairs.forEach(p=>{ const other=p.student_a_number===sn?p.student_b_number:p.student_a_number;
+          lines.push(`  • Pair with ${other} — ${p.action_type}${p.reason_category?" ("+p.reason_category:""}${p.created_by_name?", by "+p.created_by_name:""}${p.reason_category||p.created_by_name?")":""}${p.comment?" — \""+p.comment+"\"":""}`); });
+        restr.groups.forEach(gp=>{ lines.push(`  • Group "${gp.group_name}" (${parseArr(gp.student_numbers_json).length} students)${gp.reason_category?" — "+gp.reason_category:""}${gp.created_by_name?", by "+gp.created_by_name:""}${gp.comment?" — \""+gp.comment+"\"":""}`); });
+        restrSection=`In ${restr.total} restriction${restr.total!==1?"s":""}:\n`+lines.join("\n");
+      }
+      const notesSection=notes.length?notes.map(n=>`  • ${n.created_at.slice(0,10)} (${n.author_name}): ${n.note_text}`).join("\n"):"  • No notes on file.";
+      const flag=(r.freqOutlier||r.durOutlier)?"⚠️ Outside the normal observed range for the group.":"Within the normal range for the group.";
+      const cdLine=r.customCd?`Custom cooldown: ${r.customCd} min.`:"Cooldown: class default.";
+      return esc(`Teacher Brief — Student ${sn} (Grade ${r.grade}, Room ${r.room})\n${"─".repeat(50)}\nMovement (${insightsWin==="week"?"this week":insightsWin==="month"?"30 days":insightsWin==="custom"?"custom range":"all time"}):\n  ${cats}\n  ${pctLine}\n  ${flag} ${cdLine}${r.exempt?" Alert-exempt.":""}\n\nRestrictions:\n${restrSection.split("\n").map(l=>l.startsWith("  ")?l:"  "+l).join("\n")}\n\nTeacher notes:\n${notesSection}\n${"─".repeat(50)}\nFor staff use. Patterns are context to review, not conclusions.`);
+    }
+
     const verdict=r.freqOutlier?`more than most — ${r.freqPct}th percentile (grade average ${st.grade.meanTrips.toFixed(1)} trips)`
       :`${r.freqPct>=50?"a bit above":"around or below"} the middle — ${r.freqPct}th percentile (grade average ${st.grade.meanTrips.toFixed(1)} trips)`;
-    return esc(`Student ${r.sn} made ${r.trips} bathroom/water trips this week, ${verdict}. Average trip ${fmtDur(r.avg)} (grade average ${fmtDur(Math.round(st.grade.avgDuration))}).`)+((r.freqOutlier||r.durOutlier)?esc(caution):"");
+    const rc=restr.total>0?` In ${restr.total} active restriction${restr.total!==1?"s":""}.`:"";
+    return esc(`Student ${r.sn} made ${r.trips} bathroom/water trips this week, ${verdict}. Average trip ${fmtDur(r.avg)} (grade average ${fmtDur(Math.round(st.grade.avgDuration))}).${rc}`)+((r.freqOutlier||r.durOutlier)?esc(caution):"");
   }
   if(ql.includes("most often")||ql.includes("frequent")||ql.includes("leaving most")||ql.includes("most trips"))
     return esc("Most frequent bathroom/water this week ("+st.scopeLabel+"):\n"+list([...st.rows].sort((a,b)=>b.trips-a.trips).slice(0,5),r=>`${r.sn} — ${r.trips} trips (${r.freqPct}th pct)${r.exempt?" [exempt]":""}`));
@@ -1689,7 +2669,8 @@ function sweep(){
   if(changed){ save(); if(session) refreshAlertBadges(); }
 }
 function refreshAlertBadges(){
-  const open=store.alerts.filter(a=>a.status==="open"&&scopes(session,a.grade)).length;
+  const _t=store.teachers.find(t=>t.email===session.email)||session;
+  const open=store.alerts.filter(a=>a.status==="open"&&scopes(session,a.grade)&&alertPassesPrefs(a,_t)).length;
   const nav=$('button[data-route="board"]'); if(nav){ let tag=nav.querySelector(".navtag");
     if(open){ if(!tag){ tag=el('<span class="navtag"></span>'); nav.appendChild(tag);} tag.textContent=open; } else if(tag) tag.remove(); }
   if(route==="board"||route==="alerts") renderView();

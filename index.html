@@ -999,6 +999,59 @@ const Mock = {
       .sort((a,b)=>b.created_at.localeCompare(a.created_at));
     return ok({notes});
   },
+  add_teacher(p,sess){ requireAdmin(sess);
+    const email=String(p.email||"").trim().toLowerCase();
+    if(!email) throw E("Email is required.");
+    if(store.teachers.find(t=>t.email===email&&truthy(t.active))) throw E("A teacher with that email already exists.");
+    const t={teacher_id:uuid(), email, display_name:String(p.display_name||"").trim()||email,
+      role:p.role||"teacher", grade:String(p.grade||""), classroom_id:String(p.classroom_id||""),
+      active:true, alert_preferences_json:"{}", last_login_at:""};
+    store.teachers.push(t);
+    // If classroom_id is given and doesn't exist, create it
+    if(t.classroom_id && !store.classrooms.find(c=>c.classroom_id===t.classroom_id)){
+      store.classrooms.push({classroom_id:t.classroom_id, grade:t.grade, room_number:t.classroom_id, teacher_id:t.teacher_id, active:true});
+    }
+    audit(sess,"teacher_added","Teacher",t.teacher_id,"Added teacher "+t.display_name+" ("+email+").");
+    save(); return ok({ok:true, teacher_id:t.teacher_id});
+  },
+  edit_teacher(p,sess){ requireAdmin(sess);
+    const t=store.teachers.find(x=>x.teacher_id===p.teacher_id);
+    if(!t) throw E("Teacher not found.");
+    if(p.email!=null){
+      const newEmail=String(p.email).trim().toLowerCase();
+      if(!newEmail) throw E("Email can't be blank.");
+      if(newEmail!==t.email && store.teachers.find(x=>x.email===newEmail&&truthy(x.active)&&x.teacher_id!==t.teacher_id))
+        throw E("Another teacher already uses that email.");
+      t.email=newEmail;
+    }
+    if(p.display_name!=null) t.display_name=String(p.display_name).trim();
+    if(p.role!=null) t.role=p.role;
+    if(p.grade!=null) t.grade=String(p.grade);
+    if(p.classroom_id!=null) t.classroom_id=String(p.classroom_id);
+    // Update the linked classroom if needed
+    if(p.classroom_id!=null && p.classroom_id && !store.classrooms.find(c=>c.classroom_id===p.classroom_id)){
+      store.classrooms.push({classroom_id:p.classroom_id, grade:t.grade, room_number:p.classroom_id, teacher_id:t.teacher_id, active:true});
+    }
+    audit(sess,"teacher_edited","Teacher",t.teacher_id,"Edited teacher "+t.display_name+".");
+    save(); return ok({ok:true});
+  },
+  remove_teacher(p,sess){ requireAdmin(sess);
+    const t=store.teachers.find(x=>x.teacher_id===p.teacher_id);
+    if(!t) throw E("Teacher not found.");
+    if(t.email===sess.email) throw E("You can't remove yourself.");
+    t.active=false;
+    audit(sess,"teacher_removed","Teacher",t.teacher_id,"Removed teacher "+t.display_name+" ("+t.email+").");
+    save(); return ok({ok:true});
+  },
+  add_classroom(p,sess){ requireAdmin(sess);
+    const id=String(p.classroom_id||"").trim();
+    if(!id) throw E("Classroom ID is required.");
+    if(store.classrooms.find(c=>c.classroom_id===id&&truthy(c.active))) throw E("Classroom "+id+" already exists.");
+    store.classrooms.push({classroom_id:id, grade:String(p.grade||""), room_number:String(p.room_number||id),
+      teacher_id:String(p.teacher_id||""), active:true});
+    audit(sess,"classroom_added","Classroom",id,"Added classroom "+id+".");
+    save(); return ok({ok:true});
+  },
   set_rule(p,sess){ requireTeacher(sess);
     // p: { rule_type, level, grade, classroom_id, value, note }
     const ruleType=p.rule_type, level=p.level;
@@ -1259,6 +1312,8 @@ function expired(x){ if(!x)return false; const d=new Date(x).getTime(); return i
 function parseArr(s){ try{const a=JSON.parse(s); return Array.isArray(a)?a.map(String):[];}catch(e){return[];} }
 function scopes(sess,grade){ if(isAdminRole(sess.role))return true; return String(sess.grade)===String(grade); }
 function isAdminRole(r){ r=String(r||"").toLowerCase(); return r==="admin"||r==="administrator"; }
+function roleLabel(r){ r=String(r||"").toLowerCase();
+  return r==="admin"?"Admin" : r==="other"?"Staff" : "Teacher"; }
 function requireTeacher(sess){ if(!sess) throw E("Teacher sign-in required."); }
 function requireAdmin(sess){ requireTeacher(sess); if(!isAdminRole(sess.role)) throw E("Administrator access required."); }
 function safeParse(s,f){ try{return JSON.parse(s);}catch(e){return f;} }
@@ -1529,7 +1584,7 @@ function openSignIn(){
     const initials=t.display_name.split(" ").map(w=>w[0]).slice(0,2).join("");
     return `<button class="signin-opt" data-email="${esc(t.email)}">
       <span class="av">${esc(initials)}</span>
-      <span><span class="nm">${esc(t.display_name)}</span><br><span class="rl ${isAdminRole(t.role)?"admin":""}">${isAdminRole(t.role)?"Administrator":"Teacher · Grade "+esc(t.grade)+" · Room "+esc(t.classroom_id)}</span></span>
+      <span><span class="nm">${esc(t.display_name)}</span><br><span class="rl ${isAdminRole(t.role)?"admin":""}">${isAdminRole(t.role)?"Administrator":roleLabel(t.role)+" · Grade "+esc(t.grade)+" · Room "+esc(t.classroom_id)}</span></span>
     </button>`;
   }).join("");
   showModal({
@@ -1947,6 +2002,66 @@ async function viewRestrictions(v){
 }
 
 /* ---- settings (admin) ---- */
+function openAddTeacher(){
+  const grades=[...new Set(store.students.filter(s=>truthy(s.active)).map(s=>s.grade))].sort();
+  const rooms=store.classrooms.filter(c=>truthy(c.active)).map(c=>c.classroom_id).sort();
+  showModal({ title:"Add teacher",
+    bodyHtml:`<div class="field"><label>Display name</label><input id="at_name" placeholder="e.g. Ms. Johnson"/></div>
+      <div class="field"><label>Email</label><input id="at_email" type="email" placeholder="johnson@school.org"/></div>
+      <div class="row2">
+        <div class="field"><label>Role</label><select id="at_role"><option value="teacher">Teacher</option><option value="other">Staff (para, counselor, etc.)</option><option value="admin">Admin</option></select></div>
+        <div class="field"><label>Grade</label><select id="at_grade"><option value="">All (admin)</option>${grades.map(g=>`<option>${esc(g)}</option>`).join("")}</select></div>
+      </div>
+      <div class="field"><label>Classroom</label><input id="at_room" placeholder="e.g. 3C (new rooms are created automatically)" list="room_list"/>
+        <datalist id="room_list">${rooms.map(r=>`<option value="${esc(r)}">`).join("")}</datalist></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="at_save">Add teacher</button>`,
+    onMount:(m)=>{ m.querySelector("#at_save").onclick=async()=>{
+      const r=await api("add_teacher",{display_name:m.querySelector("#at_name").value, email:m.querySelector("#at_email").value,
+        role:m.querySelector("#at_role").value, grade:m.querySelector("#at_grade").value, classroom_id:m.querySelector("#at_room").value});
+      if(r.ok){ toast("Teacher added"); closeModal(); renderView(); } else toast(r.message);
+    }; }});
+}
+
+function openEditTeacher(id){
+  const t=store.teachers.find(x=>x.teacher_id===id);
+  if(!t) return;
+  const grades=[...new Set(store.students.filter(s=>truthy(s.active)).map(s=>s.grade))].sort();
+  const rooms=store.classrooms.filter(c=>truthy(c.active)).map(c=>c.classroom_id).sort();
+  showModal({ title:"Edit teacher — "+t.display_name,
+    bodyHtml:`<div class="field"><label>Display name</label><input id="et_name" value="${esc(t.display_name)}"/></div>
+      <div class="field"><label>Email</label><input id="et_email" type="email" value="${esc(t.email)}"/></div>
+      <div class="row2">
+        <div class="field"><label>Role</label><select id="et_role">${["teacher","other","admin"].map(r=>`<option value="${r}" ${t.role===r?"selected":""}>${r==="other"?"Staff (para, counselor, etc.)":r[0].toUpperCase()+r.slice(1)}</option>`).join("")}</select></div>
+        <div class="field"><label>Grade</label><select id="et_grade"><option value="">All (admin)</option>${grades.map(g=>`<option ${t.grade===g?"selected":""}>${esc(g)}</option>`).join("")}</select></div>
+      </div>
+      <div class="field"><label>Classroom</label><input id="et_room" value="${esc(t.classroom_id)}" list="eroom_list"/>
+        <datalist id="eroom_list">${rooms.map(r=>`<option value="${esc(r)}">`).join("")}</datalist></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="et_save">Save changes</button>`,
+    onMount:(m)=>{ m.querySelector("#et_save").onclick=async()=>{
+      const r=await api("edit_teacher",{teacher_id:id, email:m.querySelector("#et_email").value, display_name:m.querySelector("#et_name").value,
+        role:m.querySelector("#et_role").value, grade:m.querySelector("#et_grade").value, classroom_id:m.querySelector("#et_room").value});
+      if(r.ok){ toast("Teacher updated"); closeModal(); renderView(); } else toast(r.message);
+    }; }});
+}
+
+function openAddClassroom(){
+  const grades=[...new Set(store.students.filter(s=>truthy(s.active)).map(s=>s.grade))].sort();
+  const teachers=store.teachers.filter(t=>truthy(t.active));
+  showModal({ title:"Add classroom",
+    bodyHtml:`<div class="row2">
+      <div class="field"><label>Classroom ID</label><input id="ac_id" placeholder="e.g. 3C"/></div>
+      <div class="field"><label>Grade</label><select id="ac_grade">${grades.map(g=>`<option>${esc(g)}</option>`).join("")}</select></div></div>
+      <div class="row2">
+        <div class="field"><label>Room number</label><input id="ac_room" placeholder="e.g. 116"/></div>
+        <div class="field"><label>Assigned teacher</label><select id="ac_teacher"><option value="">Unassigned</option>${teachers.map(t=>`<option value="${esc(t.teacher_id)}">${esc(t.display_name)}</option>`).join("")}</select></div></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="ac_save">Add classroom</button>`,
+    onMount:(m)=>{ m.querySelector("#ac_save").onclick=async()=>{
+      const r=await api("add_classroom",{classroom_id:m.querySelector("#ac_id").value, grade:m.querySelector("#ac_grade").value,
+        room_number:m.querySelector("#ac_room").value, teacher_id:m.querySelector("#ac_teacher").value});
+      if(r.ok){ toast("Classroom added"); closeModal(); renderView(); } else toast(r.message);
+    }; }});
+}
+
 async function renderRulesPanel(){
   const box=$("#rulespanel"); if(!box) return;
   const grades=[...new Set(store.students.filter(s=>truthy(s.active)).map(s=>s.grade))].sort();
@@ -1992,6 +2107,20 @@ async function viewSettings(v){
       <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Cooldown and "max out at once" limits are set in the Movement rules panel below (they support school-wide and per-grade values).</div>
     </div></div>
     <div class="panel" style="margin-bottom:16px"><div class="panel-head">🪧 Movement rules <span class="count">school-wide & per-grade</span></div><div class="panel-body" id="rulespanel"></div></div>
+    <div class="panel" style="margin-bottom:16px"><div class="panel-head">👥 Teachers & classrooms <span class="count">${store.teachers.filter(t=>truthy(t.active)).length} teachers · ${store.classrooms.filter(c=>truthy(c.active)).length} classrooms</span></div>
+      <div class="panel-body">
+        <table class="grid" style="margin-bottom:10px"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Grade</th><th>Room</th><th></th></tr></thead>
+        <tbody>${store.teachers.filter(t=>truthy(t.active)).map(t=>`<tr>
+          <td><b>${esc(t.display_name)}</b></td><td style="font-size:.85rem">${esc(t.email)}</td>
+          <td><span class="tag" style="${t.role==='admin'?'background:var(--console-wash);color:var(--console-ink)':t.role==='other'?'background:var(--wait-wash);color:var(--wait-ink)':''}">${esc(roleLabel(t.role))}</span></td>
+          <td>${esc(t.grade||'all')}</td><td>${esc(t.classroom_id||'—')}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <button class="btn ghost sm" data-edit-teacher="${esc(t.teacher_id)}">Edit</button>
+            ${t.email!==session.email?`<button class="btn ghost sm" data-remove-teacher="${esc(t.teacher_id)}" data-teacher-name="${esc(t.display_name)}">Remove</button>`:''}
+          </td></tr>`).join("")}</tbody></table>
+        <div style="display:flex;gap:8px"><button class="btn sm" id="addteacher">+ Add teacher</button>
+        <button class="btn ghost sm" id="addclassroom">+ Add classroom</button></div>
+      </div></div>
     <div class="panel" style="margin-bottom:16px"><div class="panel-head">Security & privacy</div><div class="panel-body">
       <div class="row2">
         ${setField("scanner_mode","Scanner mode","select",s.scanner_mode||"true","Auto-submits when a number reaches the expected length. Makes barcode/QR scanners feel instant.",["true","false"])}
@@ -2034,6 +2163,15 @@ async function viewSettings(v){
   };
   const logoClear=$("#logo_clear");
   if(logoClear) logoClear.onclick=()=>{ setSetting("school_logo",""); saveStore(); toast("Logo removed"); renderConsole(); };
+  // Teacher management
+  const at=$("#addteacher"); if(at) at.onclick=openAddTeacher;
+  const ac=$("#addclassroom"); if(ac) ac.onclick=openAddClassroom;
+  v.querySelectorAll("[data-edit-teacher]").forEach(b=>b.onclick=()=>openEditTeacher(b.dataset.editTeacher));
+  v.querySelectorAll("[data-remove-teacher]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("Remove "+b.dataset.teacherName+"? They will lose access.")) return;
+    const r=await api("remove_teacher",{teacher_id:b.dataset.removeTeacher});
+    if(r.ok){ toast("Teacher removed"); renderView(); } else toast(r.message);
+  });
   renderRulesPanel();
   $("#reseed").onclick=()=>{ resetStore(); toast("Demo data reset"); renderConsole(); };
 }
@@ -2233,12 +2371,12 @@ function openSetCooldown(sn, currentMins){
     onMount: function(m){
       m.querySelectorAll("[data-quick]").forEach(function(b){ b.onclick=function(){ $("#cd_mins").value=b.dataset.quick; }; });
       m.querySelector("#cd_clear").onclick = async function(){
-        var r = await api("set_student_cooldown",{student_number:sn, minutes:""});
+        const r = await api("set_student_cooldown",{student_number:sn, minutes:""});
         if(r.ok){ toast("Override removed — using class default ("+classCd+" min)"); closeModal(); renderView(); } else toast(r.message);
       };
       m.querySelector("#cd_save").onclick = async function(){
-        var r = await api("set_student_cooldown",{student_number:sn, minutes:$("#cd_mins").value});
-        if(r.ok){ var v=r.data.minutes; toast(v ? "Custom cooldown set: "+v+" min" : "Override removed"); closeModal(); renderView(); } else toast(r.message);
+        const r = await api("set_student_cooldown",{student_number:sn, minutes:$("#cd_mins").value});
+        if(r.ok){ const v=r.data.minutes; toast(v ? "Custom cooldown set: "+v+" min" : "Override removed"); closeModal(); renderView(); } else toast(r.message);
       };
     }
   });
@@ -2307,64 +2445,6 @@ function openClassRules(){
           toast("Classroom rules saved"); closeModal();
         };
       }});
-  });
-}
-
-function openSetCooldown(sn, currentMins){
-  const classCd = getSetting("default_cooldown_minutes") || "10";
-  const curLabel = currentMins ? currentMins+" min (custom)" : "class default ("+classCd+" min)";
-  showModal({
-    title: "Cooldown — student "+sn,
-    desc: "Set how long this student must wait between bathroom/water trips. Leave blank to follow the class default.",
-    bodyHtml: [
-      '<div class="field"><label>Custom cooldown (minutes)',
-      '  <span class="help" title="Overrides the class-wide cooldown for this student only. Leave blank to use the class default.">?</span></label>',
-      '  <input id="cd_mins" type="number" min="0" max="120" placeholder="Class default ('+esc(classCd)+' min)" value="'+esc(currentMins||'')+'"/>',
-      '  <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Current: '+esc(curLabel)+'. Set to 0 to remove any cooldown for this student.</div></div>',
-      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">',
-      '  <span style="font-size:.85rem;color:var(--ink-soft)">Quick set:</span>',
-      [5,10,15,20,30].map(function(m){ return '<button class="btn ghost sm" data-quick="'+m+'">'+m+' min</button>'; }).join(""),
-      '</div>'
-    ].join(""),
-    footHtml: '<button class="btn ghost" data-close>Cancel</button><button class="btn ghost" id="cd_clear">Remove override</button><button class="btn go" id="cd_save">Save</button>',
-    onMount: function(m){
-      m.querySelectorAll("[data-quick]").forEach(function(b){ b.onclick=function(){ $("#cd_mins").value=b.dataset.quick; }; });
-      m.querySelector("#cd_clear").onclick = async function(){
-        var r = await api("set_student_cooldown",{student_number:sn, minutes:""});
-        if(r.ok){ toast("Override removed — using class default ("+classCd+" min)"); closeModal(); renderView(); } else toast(r.message);
-      };
-      m.querySelector("#cd_save").onclick = async function(){
-        var r = await api("set_student_cooldown",{student_number:sn, minutes:$("#cd_mins").value});
-        if(r.ok){ var v=r.data.minutes; toast(v ? "Custom cooldown set: "+v+" min" : "Override removed"); closeModal(); renderView(); } else toast(r.message);
-      };
-    }
-  });
-}
-
-function openClassRules(){
-  const cd      = getSetting("default_cooldown_minutes") || "10";
-  const maxRoom = getSetting("max_concurrent_classroom") || "";
-  showModal({
-    title: "Class rules",
-    desc: "These apply to your whole class. Per-student cooldowns override the class-wide cooldown for that student only.",
-    bodyHtml: [
-      '<div class="field"><label>Class-wide bathroom cooldown (minutes)',
-      '  <span class="help" title="After returning from a bathroom/water trip, students must wait this many minutes before going again. Set to 0 to disable.">?</span></label>',
-      '  <input id="cr_cd" type="number" min="0" max="120" value="'+esc(cd)+'" placeholder="0 = no cooldown"/>',
-      '  <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Current: '+esc(cd||"none")+' min. Students with a personal cooldown are unaffected by changes here.</div></div>',
-      '<div class="field"><label>Max students out at once (this classroom)',
-      '  <span class="help" title="When this limit is reached, the next student sees a delay. Leave blank for no limit.">?</span></label>',
-      '  <input id="cr_room" type="number" min="0" max="10" value="'+esc(maxRoom)+'" placeholder="Blank = no limit"/>',
-      '  <div style="font-size:.82rem;color:var(--ink-faint);margin-top:4px">Current: '+esc(maxRoom||"no limit")+'.</div></div>'
-    ].join(""),
-    footHtml: '<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="cr_save">Save class rules</button>',
-    onMount: function(m){
-      m.querySelector("#cr_save").onclick = async function(){
-        await api("set_setting",{key:"default_cooldown_minutes", value:$("#cr_cd").value});
-        await api("set_setting",{key:"max_concurrent_classroom",  value:$("#cr_room").value});
-        toast("Class rules saved"); closeModal();
-      };
-    }
   });
 }
 

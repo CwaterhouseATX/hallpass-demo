@@ -1761,9 +1761,37 @@ function tickClock(){ const c=$("#clock"); if(c) c.textContent=new Date().toLoca
 
 function renderView(){
   const v=$("#view"); if(!v)return;
-  ({board:viewBoard, alerts:viewAlerts, messages:viewMessages, students:viewStudents,
-    restrictions:viewRestrictions, notes:viewNotes, insights:viewInsights, assistant:viewAssistant,
-    settings:viewSettings, audit:viewAudit, console:viewBoard}[route]||viewBoard)(v);
+  const views={
+    board:()=>viewBoard(v),
+    alerts:()=>viewAlerts(v),
+    messages:()=>viewMessages(v),
+    students:()=>viewStudents(v),
+    restrictions:()=>viewRestrictions(v),
+    notes:()=>viewNotes(v),
+    insights:()=>viewInsights(v),
+    assistant:()=>viewAssistant(v),
+    settings:()=>viewSettings(v),
+    audit:()=>viewAudit(v),
+    console:()=>viewBoard(v)
+  };
+  const run=views[route]||views.board;
+  try{
+    const pending=run();
+    if(pending&&typeof pending.catch==="function") pending.catch(err=>renderViewError(v,err));
+  }catch(err){ renderViewError(v,err); }
+}
+function renderViewError(v,err){
+  console.error("Unable to render "+route,err);
+  const message=err&&err.message?err.message:String(err||"Unknown error");
+  v.innerHTML=`<div class="panel" style="max-width:680px;margin:28px auto">
+    <div class="panel-head">This screen could not be loaded</div>
+    <div class="panel-body">
+      <p style="color:var(--ink-soft);margin-top:0">Your data has not been changed. Try loading the screen again.</p>
+      <div style="background:var(--signal-wash);color:var(--signal-ink);padding:10px 12px;border-radius:9px;font-size:.86rem;margin:12px 0">${esc(message)}</div>
+      <button class="btn" id="retryview">Try again</button>
+    </div>
+  </div>`;
+  const retry=$("#retryview"); if(retry) retry.onclick=renderView;
 }
 
 /* ---- Out board (hero) ---- */
@@ -2002,6 +2030,141 @@ async function viewRestrictions(v){
   v.querySelectorAll("[data-remove-restriction]").forEach(b=>b.onclick=()=>openRemoveRestriction(b.dataset.removeRestriction));
   v.querySelectorAll("[data-edit-group]").forEach(b=>b.onclick=()=>openEditGroup(b.dataset.editGroup));
   v.querySelectorAll("[data-edit-pair]").forEach(b=>b.onclick=()=>openEditPair(b.dataset.editPair));
+}
+
+/* ---- notes ---- */
+async function viewNotes(v){
+  v.innerHTML=`<div class="view-head"><h1>Notes</h1><span class="sub">Loading teacher notes…</span></div>`;
+
+  const studentsResult=await api("list_students");
+  if(!studentsResult.ok) throw new Error(apiErrorMessage(studentsResult,"Could not load students."));
+  const students=(studentsResult.data.students||[])
+    .slice().sort((a,b)=>a.student_number.localeCompare(b.student_number));
+
+  const noteResults=await Promise.all(students.map(async student=>{
+    const result=await api("list_notes",{student_number:student.student_number});
+    if(!result.ok) return [];
+    return (result.data.notes||[]).map(note=>Object.assign({
+      student_number:student.student_number,
+      grade:student.grade,
+      classroom_id:student.classroom_id
+    },note));
+  }));
+  const notes=noteResults.flat().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+
+  v.innerHTML=`<div class="view-head"><h1>Notes</h1>
+      <span class="sub">${notes.length} note${notes.length===1?"":"s"} in your scope</span><span class="spacer"></span>
+      <button class="btn sm" id="addteachernote">+ Add note</button></div>
+    <div class="panel">
+      <div class="panel-body" style="padding-bottom:10px">
+        <div class="field" style="margin:0"><label for="notesearch">Search notes</label>
+          <input id="notesearch" type="search" placeholder="Student number, note text, or author" autocomplete="off"/>
+        </div>
+      </div>
+      <div id="noteslist"></div>
+    </div>`;
+
+  const list=$("#noteslist");
+  const draw=(query="")=>{
+    const q=query.trim().toLowerCase();
+    const visible=q?notes.filter(note=>[
+      note.student_number,note.note_text,note.author_name,note.grade,note.classroom_id
+    ].some(value=>String(value||"").toLowerCase().includes(q))):notes;
+    list.innerHTML=visible.length?visible.map(note=>{
+      const own=note.author_email===session.email;
+      const canDelete=own||isAdminRole(session.role);
+      return `<div class="alertrow" data-note-row="${esc(note.note_id)}" style="align-items:flex-start">
+        <span class="sev sev-low" style="margin-top:5px"></span>
+        <div class="msg" style="flex:1;min-width:0">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+            <b class="mono">${esc(note.student_number)}</b>
+            <span class="tag">Grade ${esc(note.grade)} · ${esc(note.classroom_id)}</span>
+            <span style="font-size:.78rem;color:var(--ink-faint)">${esc(note.author_name||note.author_email)} · ${esc(String(note.created_at||"").slice(0,10))}${note.updated_at&&note.updated_at!==note.created_at?" · edited":""}</span>
+          </div>
+          <div style="white-space:pre-wrap">${esc(note.note_text)}</div>
+        </div>
+        ${own?`<button class="btn ghost sm" data-edit-note="${esc(note.note_id)}">Edit</button>`:""}
+        ${canDelete?`<button class="btn ghost sm" data-delete-note="${esc(note.note_id)}">Delete</button>`:""}
+      </div>`;
+    }).join(""):`<div class="empty">${q?"No notes match your search.":"No notes yet."}</div>`;
+    bindNoteActions();
+  };
+
+  const bindNoteActions=()=>{
+    list.querySelectorAll("[data-edit-note]").forEach(button=>{
+      button.onclick=()=>openEditTeacherNote(notes.find(note=>note.note_id===button.dataset.editNote));
+    });
+    list.querySelectorAll("[data-delete-note]").forEach(button=>{
+      button.onclick=()=>openDeleteTeacherNote(notes.find(note=>note.note_id===button.dataset.deleteNote));
+    });
+  };
+
+  $("#notesearch").oninput=e=>draw(e.target.value);
+  $("#addteachernote").onclick=()=>openAddTeacherNote(students);
+  draw();
+}
+
+function apiErrorMessage(result,fallback){
+  return result&&(result.message||result.error)||fallback;
+}
+
+function openAddTeacherNote(students){
+  showModal({
+    title:"Add teacher note",
+    desc:"Notes are visible to authorized staff in the student's grade.",
+    bodyHtml:`<div class="field"><label>Student number</label>
+        <input id="note_student" list="note_students" autocomplete="off" placeholder="Enter a student number"/>
+        <datalist id="note_students">${students.map(student=>`<option value="${esc(student.student_number)}">Grade ${esc(student.grade)} · ${esc(student.classroom_id)}</option>`).join("")}</datalist>
+      </div>
+      <div class="field"><label>Note</label><textarea id="note_text" rows="5" placeholder="Observation, parent contact, or relevant context…"></textarea></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="save_teacher_note">Add note</button>`,
+    onMount:modal=>{
+      modal.querySelector("#save_teacher_note").onclick=async()=>{
+        const studentNumber=modal.querySelector("#note_student").value.trim();
+        const noteText=modal.querySelector("#note_text").value.trim();
+        if(!students.some(student=>student.student_number===studentNumber)){ toast("Choose a student in your scope"); return; }
+        if(!noteText){ toast("Enter a note"); return; }
+        const result=await api("add_note",{student_number:studentNumber,note_text:noteText});
+        if(!result.ok){ toast(apiErrorMessage(result,"Could not add note")); return; }
+        toast("Note added"); closeModal(); renderView();
+      };
+    }
+  });
+}
+
+function openEditTeacherNote(note){
+  if(!note) return;
+  showModal({
+    title:"Edit note for "+note.student_number,
+    bodyHtml:`<div class="field"><label>Note</label><textarea id="edit_note_text" rows="5">${esc(note.note_text)}</textarea></div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn go" id="save_note_edit">Save changes</button>`,
+    onMount:modal=>{
+      modal.querySelector("#save_note_edit").onclick=async()=>{
+        const noteText=modal.querySelector("#edit_note_text").value.trim();
+        if(!noteText){ toast("Enter a note"); return; }
+        const result=await api("edit_note",{note_id:note.note_id,note_text:noteText});
+        if(!result.ok){ toast(apiErrorMessage(result,"Could not edit note")); return; }
+        toast("Note updated"); closeModal(); renderView();
+      };
+    }
+  });
+}
+
+function openDeleteTeacherNote(note){
+  if(!note) return;
+  showModal({
+    title:"Delete this note?",
+    desc:"This removes the note from the student's record.",
+    bodyHtml:`<div style="background:var(--surface-2);padding:12px;border-radius:10px;white-space:pre-wrap">${esc(note.note_text)}</div>`,
+    footHtml:`<button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="confirm_note_delete">Delete note</button>`,
+    onMount:modal=>{
+      modal.querySelector("#confirm_note_delete").onclick=async()=>{
+        const result=await api("delete_note",{note_id:note.note_id});
+        if(!result.ok){ toast(apiErrorMessage(result,"Could not delete note")); return; }
+        toast("Note deleted"); closeModal(); renderView();
+      };
+    }
+  });
 }
 
 /* ---- settings (admin) ---- */

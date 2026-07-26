@@ -1,0 +1,7 @@
+{
+  "name": "hallpass-demo",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/check-demo.mjs"
+  }
+}
